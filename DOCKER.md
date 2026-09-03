@@ -1,10 +1,43 @@
 # Docker
 
-Run 9Router in a container. Published image: [`decolua/9router`](https://hub.docker.com/r/decolua/9router) — multi-platform `linux/amd64` + `linux/arm64`.
+Run 9Router in a container.
 
 ---
 
-# 👤 For Users
+# 👤 Local Build (No External Registry)
+
+## Build and run with Docker Compose
+
+```bash
+# Ensure environment file exists
+cp -n .env.example .env
+
+# Build from source and launch
+docker compose up -d --build
+```
+
+App listens on port `20128`. Open: http://localhost:20128
+
+## Build and run with Docker CLI
+
+```bash
+# Build local image
+docker build -t 9router:local .
+
+# Run container
+docker run -d \
+  -p 20128:20128 \
+  -v "$HOME/.9router:/app/data" \
+  -e DATA_DIR=/app/data \
+  --name 9router \
+  9router:local
+```
+
+---
+
+# 👤 For Prebuilt Images (Optional)
+
+Published image: [`decolua/9router`](https://hub.docker.com/r/decolua/9router) — multi-platform `linux/amd64` + `linux/arm64`.
 
 ## Quick start
 
