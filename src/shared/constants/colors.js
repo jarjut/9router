@@ -1,52 +1,52 @@
-// Claude-inspired color palette for Endpoint Proxy
-// Light theme: Warm beige/cream tones
-// Dark theme: Deep charcoal/brown tones
+// Custom Minimalist Blue & OLED Black palette for Endpoint Proxy
+// Light theme: Crisp, clean minimalist whites & neutral slates
+// Dark theme: Deep OLED true black with high-contrast surfaces
 
 export const COLORS = {
-  // Primary - Warm Coral/Terracotta (Claude-like)
+  // Primary - Electric/Precision Blue (Minimalist, sharp, high accessibility)
   primary: {
-    DEFAULT: "#D97757",
-    hover: "#C56243",
-    light: "#E8A58C",
-    dark: "#B0664D",
+    DEFAULT: "#2563EB", // Blue 600 - Vivid anchor
+    hover: "#1D4ED8",   // Blue 700 - Clear active contrast
+    light: "#60A5FA",   // Blue 400 - Optimized for dark mode accents
+    dark: "#1E40AF",    // Blue 800 - Deep press state
   },
 
-  // Light theme backgrounds
+  // Light theme: Pure crisp white, cool grays, high-contrast typography
   light: {
-    bg: "#FBF9F6",
-    bgAlt: "#F5F1ED",
+    bg: "#FFFFFF",
+    bgAlt: "#F8FAFC",                          // Slate 50
     surface: "#FFFFFF",
-    sidebar: "rgba(246, 246, 246, 0.8)",
-    border: "rgba(0, 0, 0, 0.1)",
-    textMain: "#383733",
-    textMuted: "#75736E",
+    sidebar: "rgba(248, 250, 252, 0.85)",     // Frosted clean surface
+    border: "rgba(15, 23, 42, 0.08)",         // Subtle separation
+    textMain: "#0F172A",                       // Slate 900 (15:1 contrast against white)
+    textMuted: "#475569",                      // Slate 600 (WCAG AA compliant)
   },
 
-  // Dark theme backgrounds
+  // Dark theme: Pure OLED Black with calibrated surface elevation
   dark: {
-    bg: "#191918",
-    bgAlt: "#1F1F1E",
-    surface: "#242423",
-    sidebar: "rgba(30, 30, 30, 0.8)",
-    border: "rgba(255, 255, 255, 0.1)",
-    textMain: "#ECEBE8",
-    textMuted: "#9E9D99",
+    bg: "#000000",                             // True OLED black
+    bgAlt: "#0B0F17",                          // Subtle deep-slate elevation
+    surface: "#111827",                        // Gray 900 surface for cards/panels
+    sidebar: "rgba(11, 15, 23, 0.85)",        // Translucent dark dock/sidebar
+    border: "rgba(255, 255, 255, 0.12)",      // Crisp divider lines
+    textMain: "#F8FAFC",                       // Slate 50 (near pure white, anti-glare)
+    textMuted: "#94A3B8",                      // Slate 400 (clean secondary data)
   },
 
-  // Status colors
+  // Status colors: Calibrated standard indicators with clean saturations
   status: {
-    success: "#22C55E",
-    successLight: "#DCFCE7",
-    successDark: "#166534",
-    warning: "#F59E0B",
+    success: "#10B981",       // Emerald
+    successLight: "#D1FAE5",
+    successDark: "#047857",
+    warning: "#F59E0B",       // Amber
     warningLight: "#FEF3C7",
-    warningDark: "#92400E",
-    error: "#EF4444",
+    warningDark: "#B45309",
+    error: "#EF4444",         // Rose red
     errorLight: "#FEE2E2",
-    errorDark: "#991B1B",
-    info: "#3B82F6",
-    infoLight: "#DBEAFE",
-    infoDark: "#1E40AF",
+    errorDark: "#B91C1C",
+    info: "#0EA5E9",          // Sky cyan (contrasts clearly with primary blue)
+    infoLight: "#E0F2FE",
+    infoDark: "#0369A1",
   },
 };
 
@@ -64,8 +64,8 @@ export const CSS_VARIABLES = {
     "--color-text-muted": COLORS.light.textMuted,
   },
   dark: {
-    "--color-primary": COLORS.primary.DEFAULT,
-    "--color-primary-hover": COLORS.primary.hover,
+    "--color-primary": COLORS.primary.light, // Uses lighter blue in dark mode for better visibility
+    "--color-primary-hover": COLORS.primary.DEFAULT,
     "--color-bg": COLORS.dark.bg,
     "--color-bg-alt": COLORS.dark.bgAlt,
     "--color-surface": COLORS.dark.surface,
