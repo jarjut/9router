@@ -1,5 +1,8 @@
 {
-  "name": "9router",
+  "name": "@jarjut/9router",
+  "publishConfig": {
+    "access": "public"
+  },
   "version": "0.5.116",
   "description": "9Router CLI - Start and manage 9Router server",
   "bin": {
