@@ -1,6 +1,6 @@
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
-
+import { isValidTimeZone } from "../helpers/time.js";
 const DEFAULT_MITM_ROUTER_BASE = "http://localhost:20128";
 const DEFAULT_HEADROOM_URL = process.env.HEADROOM_URL || "http://localhost:8787";
 
@@ -62,6 +62,8 @@ const DEFAULT_SETTINGS = {
   pxpipeAutoInstall: true,
   pxpipeMinChars: 25000,
   pxpipeTimeoutMs: 15000,
+  timezone: "auto",
+  clientTimezone: "",
 };
 
 async function readRaw() {
@@ -93,6 +95,31 @@ export async function getSettings() {
   const raw = await readRaw();
   return mergeWithDefaults(raw);
 }
+const TZ_CACHE_TTL_MS = 5000;
+let cachedTz = null;
+let cachedTzTs = 0;
+
+export async function getTimezone() {
+  const now = Date.now();
+  if (cachedTz && now - cachedTzTs < TZ_CACHE_TTL_MS) {
+    return cachedTz;
+  }
+  try {
+    const settings = await getSettings();
+    const tz = settings.timezone;
+    if (tz && tz !== "auto" && isValidTimeZone(tz)) {
+      cachedTz = tz;
+    } else if (settings.clientTimezone && isValidTimeZone(settings.clientTimezone)) {
+      cachedTz = settings.clientTimezone;
+    } else {
+      cachedTz = process.env.TZ && isValidTimeZone(process.env.TZ) ? process.env.TZ : "UTC";
+    }
+  } catch {
+    cachedTz = "UTC";
+  }
+  cachedTzTs = now;
+  return cachedTz;
+}
 
 // Atomic read-merge-write inside transaction (prevents losing concurrent updates)
 export async function updateSettings(updates) {
@@ -107,6 +134,10 @@ export async function updateSettings(updates) {
       [stringifyJson(next)],
     );
   });
+    if (updates && (updates.timezone !== undefined || updates.clientTimezone !== undefined)) {
+      cachedTz = null;
+      cachedTzTs = 0;
+    }
   return mergeWithDefaults(next);
 }
 

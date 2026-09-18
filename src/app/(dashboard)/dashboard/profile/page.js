@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Card, Button, Toggle, Input } from "@/shared/components";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { Card, Button, Toggle, Input, Select } from "@/shared/components";
 import Modal, { ConfirmModal } from "@/shared/components/Modal";
 import LanguageSwitcher from "@/shared/components/LanguageSwitcher";
 import { useTheme } from "@/shared/hooks/useTheme";
@@ -18,6 +18,23 @@ function getLocaleFromCookie() {
   const value = cookie ? decodeURIComponent(cookie.split("=")[1]) : "en";
   return normalizeLocale(value);
 }
+const COMMON_TIMEZONES = [
+  { value: "auto", label: "Auto (Browser Detected)" },
+  { value: "UTC", label: "UTC" },
+  { value: "Asia/Jakarta", label: "Asia/Jakarta (WIB, UTC+7)" },
+  { value: "Asia/Makassar", label: "Asia/Makassar (WITA, UTC+8)" },
+  { value: "Asia/Jayapura", label: "Asia/Jayapura (WIT, UTC+9)" },
+  { value: "Asia/Singapore", label: "Asia/Singapore (SGT, UTC+8)" },
+  { value: "Asia/Bangkok", label: "Asia/Bangkok (ICT, UTC+7)" },
+  { value: "Asia/Tokyo", label: "Asia/Tokyo (JST, UTC+9)" },
+  { value: "Europe/London", label: "Europe/London (GMT/BST)" },
+  { value: "Europe/Paris", label: "Europe/Paris (CET/CEST)" },
+  { value: "America/New_York", label: "America/New_York (EST/EDT)" },
+  { value: "America/Chicago", label: "America/Chicago (CST/CDT)" },
+  { value: "America/Denver", label: "America/Denver (MST/MDT)" },
+  { value: "America/Los_Angeles", label: "America/Los_Angeles (PST/PDT)" },
+  { value: "Australia/Sydney", label: "Australia/Sydney (AEST/AEDT)" },
+];
 
 export default function ProfilePage() {
   const { theme, setTheme, isDark } = useTheme();
@@ -33,6 +50,81 @@ export default function ProfilePage() {
   const [dbLoading, setDbLoading] = useState(false);
   const [dbStatus, setDbStatus] = useState({ type: "", message: "" });
   const [dbAuth, setDbAuth] = useState({ open: false, mode: "", password: "" });
+  const [mounted, setMounted] = useState(false);
+  const [browserTz, setBrowserTz] = useState("UTC");
+  const [tzUpdating, setTzUpdating] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    try {
+      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (detected) {
+        setBrowserTz(detected);
+        if (settings.clientTimezone !== detected) {
+          fetch("/api/settings", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ clientTimezone: detected }),
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+              if (d) setSettings((prev) => ({ ...prev, clientTimezone: detected }));
+            })
+            .catch(() => {});
+        }
+      }
+    } catch {}
+  }, [settings.clientTimezone]);
+
+  const timezoneOptions = useMemo(() => {
+    const commonValues = new Set(COMMON_TIMEZONES.map((o) => o.value));
+    const selectedTz = settings.timezone;
+    const initialOptions = [...COMMON_TIMEZONES];
+    if (selectedTz && selectedTz !== "auto" && !commonValues.has(selectedTz)) {
+      initialOptions.push({ value: selectedTz, label: selectedTz });
+    }
+
+    if (!mounted) {
+      return initialOptions;
+    }
+
+    const autoLabel = `Auto (Browser: ${browserTz})`;
+    const options = initialOptions.map((o) =>
+      o.value === "auto" ? { ...o, label: autoLabel } : o
+    );
+
+    let all = [];
+    if (typeof Intl !== "undefined" && typeof Intl.supportedValuesOf === "function") {
+      try {
+        all = Intl.supportedValuesOf("timeZone");
+      } catch {}
+    }
+    const allSet = new Set(initialOptions.map((o) => o.value));
+    const extra = all
+      .filter((tz) => !allSet.has(tz))
+      .map((tz) => ({ value: tz, label: tz }));
+
+    return [...options, ...extra];
+  }, [mounted, browserTz, settings.timezone]);
+
+  const handleTimezoneChange = async (e) => {
+    const newTz = e.target.value;
+    setTzUpdating(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ timezone: newTz, clientTimezone: browserTz }),
+      });
+      if (res.ok) {
+        setSettings((prev) => ({ ...prev, timezone: newTz, clientTimezone: browserTz }));
+      }
+    } catch (err) {
+      console.error("Failed to update timezone:", err);
+    } finally {
+      setTzUpdating(false);
+    }
+  };
   const pendingImportRef = useRef(null);
   const [oidcForm, setOidcForm] = useState({
     authMode: "password",
@@ -857,6 +949,28 @@ export default function ProfilePage() {
             <span className="text-sm text-text-muted">Display language</span>
             <span className="text-2xl">{LOCALE_FLAGS[locale] || "🌐"}</span>
           </button>
+        </Card>
+
+        {/* Timezone */}
+        <Card>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="size-10 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[20px]">schedule</span>
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold">Timezone</h3>
+              <p className="text-xs text-text-muted">
+                Controls daily reset boundaries, chart intervals, and log timestamps
+              </p>
+            </div>
+          </div>
+          <Select
+            value={settings.timezone || "auto"}
+            onChange={handleTimezoneChange}
+            options={timezoneOptions}
+            disabled={loading || tzUpdating || !mounted}
+            className="w-full"
+          />
         </Card>
 
         {/* Security */}

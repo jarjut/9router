@@ -1,5 +1,7 @@
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
+import { parseFilterDate } from "../helpers/time.js";
+import { getTimezone } from "./settingsRepo.js";
 
 const DEFAULT_MAX_RECORDS = 200;
 const DEFAULT_BATCH_SIZE = 20;
@@ -161,6 +163,7 @@ export async function saveRequestDetail(detail) {
 
 export async function getRequestDetails(filter = {}) {
   const db = await getAdapter();
+  const timeZone = await getTimezone();
   const conds = [];
   const params = [];
 
@@ -168,8 +171,14 @@ export async function getRequestDetails(filter = {}) {
   if (filter.model) { conds.push("model = ?"); params.push(filter.model); }
   if (filter.connectionId) { conds.push("connectionId = ?"); params.push(filter.connectionId); }
   if (filter.status) { conds.push("status = ?"); params.push(filter.status); }
-  if (filter.startDate) { conds.push("timestamp >= ?"); params.push(new Date(filter.startDate).toISOString()); }
-  if (filter.endDate) { conds.push("timestamp <= ?"); params.push(new Date(filter.endDate).toISOString()); }
+  if (filter.startDate) {
+    const parsed = parseFilterDate(filter.startDate, timeZone);
+    if (parsed) { conds.push("timestamp >= ?"); params.push(parsed); }
+  }
+  if (filter.endDate) {
+    const parsed = parseFilterDate(filter.endDate, timeZone);
+    if (parsed) { conds.push("timestamp <= ?"); params.push(parsed); }
+  }
 
   const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
   const cntRow = db.get(`SELECT COUNT(*) as c FROM requestDetails ${where}`, params);

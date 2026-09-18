@@ -99,6 +99,16 @@ function getInputTokens(tokens) {
   return prompt < cache ? cache : prompt;
 }
 
+function formatDetailTimestamp(iso, timeZone) {
+  if (!iso) return "—";
+  try {
+    const opts = timeZone && timeZone !== "auto" ? { timeZone } : undefined;
+    return new Date(iso).toLocaleString(undefined, opts);
+  } catch {
+    return new Date(iso).toLocaleString();
+  }
+}
+
 export default function RequestDetailsTab() {
   const [details, setDetails] = useState([]);
   const [pagination, setPagination] = useState({
@@ -117,6 +127,7 @@ export default function RequestDetailsTab() {
     startDate: "",
     endDate: ""
   });
+  const [activeTimezone, setActiveTimezone] = useState("UTC");
 
   const fetchProviders = useCallback(async () => {
     try {
@@ -142,11 +153,12 @@ export default function RequestDetailsTab() {
       if (filters.startDate) params.append("startDate", filters.startDate);
       if (filters.endDate) params.append("endDate", filters.endDate);
 
-      const res = await fetch(`/api/usage/request-details?${params}`);
+      const res = await fetch(`/api/usage/request-details?${params}`, { cache: "no-store" });
       const data = await res.json();
 
       setDetails(data.details || []);
       setPagination(prev => ({ ...prev, ...data.pagination }));
+      if (data.timezone) setActiveTimezone(data.timezone);
     } catch (error) {
       console.error("Failed to fetch request details:", error);
     } finally {
@@ -286,7 +298,7 @@ export default function RequestDetailsTab() {
                     className="border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
                   >
                     <td className="whitespace-nowrap p-4 text-sm text-text-main">
-                      {new Date(detail.timestamp).toLocaleString()}
+                      {formatDetailTimestamp(detail.timestamp, activeTimezone)}
                     </td>
                     <td className="max-w-[260px] truncate p-4 font-mono text-sm text-text-main">
                       {detail.model}
@@ -358,7 +370,7 @@ export default function RequestDetailsTab() {
               </div>
               <div>
                 <span className="text-text-muted">Timestamp:</span>{" "}
-                <span className="text-text-main">{new Date(selectedDetail.timestamp).toLocaleString()}</span>
+                <span className="text-text-main">{formatDetailTimestamp(selectedDetail.timestamp, activeTimezone)}</span>
               </div>
               <div>
                  <span className="text-text-muted">Provider:</span>{" "}

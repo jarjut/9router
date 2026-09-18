@@ -2,6 +2,8 @@ import { EventEmitter } from "events";
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
 import { getMeta, setMeta } from "../helpers/metaStore.js";
+import { getLocalDateKey, getStartOfDayUtc, formatLogDate } from "../helpers/time.js";
+import { getTimezone } from "./settingsRepo.js";
 
 function maskApiKey(key) {
   if (!key || typeof key !== "string") return null;
@@ -45,10 +47,6 @@ function scheduleStatsEvent(event, delayMs = 150) {
   statsEmitTimers[key]?.unref?.();
 }
 
-function getLocalDateKey(timestamp) {
-  const d = timestamp ? new Date(timestamp) : new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 function addToCounter(target, key, values) {
   if (!target[key]) target[key] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0 };
@@ -244,6 +242,8 @@ export async function saveRequestUsage(entry) {
 
     if (!entry.timestamp) entry.timestamp = new Date().toISOString();
     entry.cost = await calculateCost(entry.provider, entry.model, entry.tokens);
+    const timeZone = await getTimezone();
+    const dateKey = getLocalDateKey(entry.timestamp, timeZone);
 
     const tokens = entry.tokens || {};
     const promptTokens = tokens.prompt_tokens || tokens.input_tokens || 0;
@@ -288,7 +288,6 @@ export async function saveRequestUsage(entry) {
         ]
       );
 
-      const dateKey = getLocalDateKey(entry.timestamp);
       const row = db.get(`SELECT data FROM usageDaily WHERE dateKey = ?`, [dateKey]);
       const day = row ? parseJson(row.data, {}) : {
         requests: 0, promptTokens: 0, completionTokens: 0, cost: 0,
@@ -333,19 +332,21 @@ export async function getUsageHistory(filter = {}) {
   }));
 }
 
-function loadDaysInRange(adapter, maxDays) {
+function loadDaysInRange(adapter, maxDays, timeZone = "UTC") {
   if (maxDays == null) {
     return adapter.all(`SELECT dateKey, data FROM usageDaily`);
   }
-  const today = new Date();
-  const cutoff = new Date(today.getFullYear(), today.getMonth(), today.getDate() - maxDays + 1);
-  const cutoffKey = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, "0")}-${String(cutoff.getDate()).padStart(2, "0")}`;
+  const todayKey = getLocalDateKey(Date.now(), timeZone);
+  const [y, m, d] = todayKey.split("-").map(Number);
+  const cutoffDate = new Date(Date.UTC(y, m - 1, d - maxDays + 1));
+  const cutoffKey = cutoffDate.toISOString().slice(0, 10);
   return adapter.all(`SELECT dateKey, data FROM usageDaily WHERE dateKey >= ?`, [cutoffKey]);
 }
 
 export async function getUsageStats(period = "all") {
   const db = await getAdapter();
 
+  const timeZone = await getTimezone();
   const [{ getProviderConnections }, { getApiKeys }, { getProviderNodes }] = await Promise.all([
     import("./connectionsRepo.js"),
     import("./apiKeysRepo.js"),
@@ -448,7 +449,7 @@ export async function getUsageStats(period = "all") {
   if (useDailySummary) {
     const periodDays = { "7d": 7, "30d": 30, "60d": 60 };
     const maxDays = periodDays[period] || null;
-    const dayRows = loadDaysInRange(db, maxDays);
+    const dayRows = loadDaysInRange(db, maxDays, timeZone);
 
     for (const dr of dayRows) {
       const dateKey = dr.dateKey;
@@ -567,8 +568,7 @@ export async function getUsageStats(period = "all") {
     // 24h / today: live history
     let cutoff;
     if (period === "today") {
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
+      const startOfDay = getStartOfDayUtc(timeZone);
       cutoff = startOfDay.toISOString();
     } else {
       cutoff = new Date(Date.now() - PERIOD_MS["24h"]).toISOString();
@@ -660,16 +660,16 @@ export async function getUsageStats(period = "all") {
 
 export async function getChartData(period = "7d") {
   const db = await getAdapter();
+  const timeZone = await getTimezone();
   const now = Date.now();
 
   if (period === "today") {
     const bucketCount = 24;
     const bucketMs = 3600000;
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    const startOfDay = getStartOfDayUtc(timeZone);
     const startTime = startOfDay.getTime();
     const endTime = startTime + bucketCount * bucketMs;
-    const labelFn = (ts) => new Date(ts).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+    const labelFn = (ts) => new Intl.DateTimeFormat("en-US", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(ts));
     const buckets = Array.from({ length: bucketCount }, (_, i) => ({ label: labelFn(startTime + i * bucketMs), tokens: 0, cost: 0 }));
 
     const rows = db.all(
@@ -691,7 +691,7 @@ export async function getChartData(period = "7d") {
   if (period === "24h") {
     const bucketCount = 24;
     const bucketMs = 3600000;
-    const labelFn = (ts) => new Date(ts).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+    const labelFn = (ts) => new Intl.DateTimeFormat("en-US", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(ts));
     const startTime = now - bucketCount * bucketMs;
     const buckets = Array.from({ length: bucketCount }, (_, i) => ({ label: labelFn(startTime + i * bucketMs), tokens: 0, cost: 0 }));
 
@@ -710,18 +710,19 @@ export async function getChartData(period = "7d") {
   }
 
   const bucketCount = period === "7d" ? 7 : period === "30d" ? 30 : 60;
-  const today = new Date();
-  const labelFn = (d) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const labelFn = (d) => new Intl.DateTimeFormat("en-US", { timeZone, month: "short", day: "numeric" }).format(d);
 
-  // Build map of dateKey → day data
-  const dayRows = loadDaysInRange(db, bucketCount);
+  const dayRows = loadDaysInRange(db, bucketCount, timeZone);
   const dayMap = {};
   for (const r of dayRows) dayMap[r.dateKey] = parseJson(r.data, {});
 
+  const todayKey = getLocalDateKey(Date.now(), timeZone);
+  const [ty, tm, td] = todayKey.split("-").map(Number);
+
   return Array.from({ length: bucketCount }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() - (bucketCount - 1 - i));
-    const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const offset = bucketCount - 1 - i;
+    const d = new Date(Date.UTC(ty, tm - 1, td - offset));
+    const dateKey = d.toISOString().slice(0, 10);
     const dayData = dayMap[dateKey];
     return {
       label: labelFn(d),
@@ -731,10 +732,6 @@ export async function getChartData(period = "7d") {
   });
 }
 
-function formatLogDate(date = new Date()) {
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-}
 
 // No-op: request log is now derived from usageHistory table on read.
 export async function appendRequestLog() {}
@@ -742,6 +739,7 @@ export async function appendRequestLog() {}
 export async function getRecentLogs(limit = 200) {
   try {
     const db = await getAdapter();
+    const timeZone = await getTimezone();
     const rows = db.all(
       `SELECT timestamp, provider, model, connectionId, promptTokens, completionTokens, status, tokens FROM usageHistory ORDER BY id DESC LIMIT ?`,
       [limit],
@@ -756,7 +754,7 @@ export async function getRecentLogs(limit = 200) {
     } catch {}
 
     return rows.map((r) => {
-      const ts = formatLogDate(new Date(r.timestamp));
+      const ts = formatLogDate(new Date(r.timestamp), timeZone);
       const p = r.provider?.toUpperCase() || "-";
       const m = r.model || "-";
       const account = connMap[r.connectionId] || (r.connectionId ? r.connectionId.slice(0, 8) : "-");

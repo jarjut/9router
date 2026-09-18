@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getRequestDetails } from "@/lib/usageDb";
+import { getRequestDetails, getTimezone } from "@/lib/usageDb";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 /**
  * GET /api/usage/request-details
@@ -63,7 +66,11 @@ export async function GET(request) {
       return redacted;
     });
 
-    return NextResponse.json({ ...result, details: redactedDetails });
+    const timeZone = await getTimezone();
+    return NextResponse.json(
+      { ...result, details: redactedDetails, timezone: timeZone },
+      { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
+    );
   } catch (error) {
     console.error("[API] Failed to get request details:", error);
     return NextResponse.json(
