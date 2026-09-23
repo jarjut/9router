@@ -9,7 +9,7 @@ Chạy 9Router trên máy cá nhân để phát triển và dùng cá nhân.
 Cài đặt 9Router toàn cục qua npm:
 
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 ```
 
 **Yêu cầu:**
@@ -81,13 +81,13 @@ Mọi cấu hình, API keys và combos được giữ lại trong thư mục dat
 Cập nhật phiên bản mới nhất:
 
 ```bash
-npm update -g 9router
+npm update -g @jarjut/9router
 ```
 
 Kiểm tra version hiện tại:
 
 ```bash
-npm list -g 9router
+npm list -g @jarjut/9router
 ```
 
 ---
@@ -113,7 +113,7 @@ Nếu gặp lỗi permission khi cài đặt:
 
 ```bash
 # Use sudo (not recommended)
-sudo npm install -g 9router
+sudo npm install -g @jarjut/9router
 
 # Or fix npm permissions (recommended)
 mkdir ~/.npm-global

@@ -34,7 +34,7 @@ npm --version
 どこからでも使用できるように9Routerをグローバルインストール:
 
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 ```
 
 **9Routerを起動:**
@@ -46,7 +46,7 @@ npm install -g 9router
 **利点:**
 - ✅ どのディレクトリからでも実行
 - ✅ シンプルなコマンド: `9router`
-- ✅ `npm update -g 9router` で自動更新
+- ✅ `npm update -g @jarjut/9router` で自動更新
 
 ### 方法2: ローカルインストール
 
@@ -55,13 +55,13 @@ npm install -g 9router
 ```bash
 mkdir my-9router
 cd my-9router
-npm install 9router
+npm install @jarjut/9router
 ```
 
 **9Routerを起動:**
 
 ```bash
-npx 9router
+npx @jarjut/9router
 ```
 
 **利点:**
@@ -74,7 +74,7 @@ npx 9router
 GitHubからクローンしてビルド:
 
 ```bash
-git clone https://github.com/decolua/9router.git
+git clone https://github.com/jarjut/9router.git
 cd 9router/app
 npm install
 npm run build
@@ -283,7 +283,7 @@ echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
 source ~/.bashrc
 
 # 再度インストール
-npm install -g 9router
+npm install -g @jarjut/9router
 ```
 
 ### Node.jsバージョンが古すぎる
@@ -372,7 +372,7 @@ pm2 save
 ### ローカル開発
 
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 9router
 ```
 
@@ -382,7 +382,7 @@ npm install -g 9router
 
 ```bash
 # インストール
-npm install -g 9router
+npm install -g @jarjut/9router
 
 # 設定
 export JWT_SECRET="your-secure-secret"
@@ -401,7 +401,7 @@ pm2 startup
 ### Docker
 
 ```bash
-docker pull 9router/9router:latest
+docker pull jarjut/9router:latest
 
 docker run -d \
   -p 20128:20128 \
@@ -409,7 +409,7 @@ docker run -d \
   -e INITIAL_PASSWORD="your-password" \
   -v 9router-data:/root/.9router \
   --name 9router \
-  9router/9router:latest
+  jarjut/9router:latest
 ```
 
 **ユースケース:** コンテナデプロイ、Kubernetes
@@ -444,7 +444,7 @@ server {
 ### グローバルインストールを削除
 
 ```bash
-npm uninstall -g 9router
+npm uninstall -g @jarjut/9router
 ```
 
 ### データディレクトリを削除
@@ -474,5 +474,5 @@ nano ~/.bashrc  # または ~/.zshrc
 ## ヘルプが必要?
 
 - **ウェブサイト**: [9router.com](https://9router.com)
-- **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **GitHub**: [github.com/jarjut/9router](https://github.com/jarjut/9router)
+- **Issues**: [github.com/jarjut/9router/issues](https://github.com/jarjut/9router/issues)

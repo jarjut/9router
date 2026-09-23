@@ -9,7 +9,7 @@
 npm経由で9Routerをグローバルインストール:
 
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 ```
 
 **要件:**
@@ -81,13 +81,13 @@ APIポート(20128)とダッシュボードポート(3000)はアプリケーシ�
 最新バージョンに更新:
 
 ```bash
-npm update -g 9router
+npm update -g @jarjut/9router
 ```
 
 現在のバージョンを確認:
 
 ```bash
-npm list -g 9router
+npm list -g @jarjut/9router
 ```
 
 ---
@@ -113,7 +113,7 @@ kill -9 <PID>
 
 ```bash
 # sudoを使用 (非推奨)
-sudo npm install -g 9router
+sudo npm install -g @jarjut/9router
 
 # またはnpm権限を修正 (推奨)
 mkdir ~/.npm-global

@@ -9,7 +9,7 @@ Pon en marcha 9Router en 5 minutos y comienza a enrutar solicitudes de IA de for
 ### 1. Instalar
 
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 ```
 
 **Requisitos:** Node.js 20+ ([Detalles de instalación](getting-started/installation.md))
@@ -243,5 +243,5 @@ Rutina diaria:
 ## ¿Necesitas ayuda?
 
 - **Sitio web**: [9router.com](https://9router.com)
-- **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **GitHub**: [github.com/jarjut/9router](https://github.com/jarjut/9router)
+- **Issues**: [github.com/jarjut/9router/issues](https://github.com/jarjut/9router/issues)

@@ -9,7 +9,7 @@
 ### 1. インストール
 
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 ```
 
 **要件:** Node.js 20+ ([インストール詳細](getting-started/installation.md))
@@ -243,5 +243,5 @@ CLIで使用: premium-coding
 ## ヘルプが必要?
 
 - **ウェブサイト**: [9router.com](https://9router.com)
-- **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **GitHub**: [github.com/jarjut/9router](https://github.com/jarjut/9router)
+- **Issues**: [github.com/jarjut/9router/issues](https://github.com/jarjut/9router/issues)
