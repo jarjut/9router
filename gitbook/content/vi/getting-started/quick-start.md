@@ -9,7 +9,7 @@ Khởi chạy 9Router trong 5 phút và bắt đầu định tuyến các reques
 ### 1. Cài đặt
 
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 ```
 
 **Yêu cầu:** Node.js 20+ ([Chi tiết cài đặt](getting-started/installation.md))
@@ -243,5 +243,5 @@ Daily routine:
 ## Cần trợ giúp?
 
 - **Website**: [9router.com](https://9router.com)
-- **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **GitHub**: [github.com/jarjut/9router](https://github.com/jarjut/9router)
+- **Issues**: [github.com/jarjut/9router/issues](https://github.com/jarjut/9router/issues)

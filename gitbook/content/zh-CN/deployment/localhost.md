@@ -9,7 +9,7 @@
 通过 npm 全局安装 9Router:
 
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 ```
 
 **要求:**
@@ -81,13 +81,13 @@ API 端口(20128)和仪表盘端口(3000)在应用中配置。如需修改,你�
 更新到最新版本:
 
 ```bash
-npm update -g 9router
+npm update -g @jarjut/9router
 ```
 
 查看当前版本:
 
 ```bash
-npm list -g 9router
+npm list -g @jarjut/9router
 ```
 
 ---
@@ -113,7 +113,7 @@ kill -9 <PID>
 
 ```bash
 # 使用 sudo(不推荐)
-sudo npm install -g 9router
+sudo npm install -g @jarjut/9router
 
 # 或修复 npm 权限(推荐)
 mkdir ~/.npm-global

@@ -8,11 +8,11 @@
   
   **将所有 AI 编程工具（Claude Code、Cursor、Antigravity、Copilot、Codex、Gemini、OpenCode、Cline、OpenClaw...）连接到 40+ AI 提供商和 100+ 模型。**
   
-  [![npm](https://img.shields.io/npm/v/9router.svg)](https://www.npmjs.com/package/9router)
-  [![Downloads](https://img.shields.io/npm/dm/9router.svg)](https://www.npmjs.com/package/9router)
-  [![License](https://img.shields.io/npm/l/9router.svg)](https://github.com/decolua/9router/blob/main/LICENSE)
+  [![npm](https://img.shields.io/npm/v/@jarjut/9router.svg)](https://www.npmjs.com/package/@jarjut/9router)
+  [![Downloads](https://img.shields.io/npm/dm/@jarjut/9router.svg)](https://www.npmjs.com/package/@jarjut/9router)
+  [![License](https://img.shields.io/npm/l/@jarjut/9router.svg)](https://github.com/jarjut/9router/blob/main/LICENSE)
 
-  <a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="decolua%2F9router | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+  <a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="jarjut%2F9router | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
   
   [🚀 快速开始](#-快速开始) • [💡 功能特点](#-主要功能) • [📖 设置指南](#-设置指南) • [🌐 网站](https://9router.com)
 
@@ -74,7 +74,7 @@
 **1. 全局安装：**
 
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 9router
 ```
 
@@ -173,7 +173,7 @@ PORT=20128 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:20128 npm run 
 
 </div>
 
-> 🎬 **制作了关于 9Router 的视频？** 提交 [Pull Request](https://github.com/decolua/9router/pulls)，将你的视频添加到此部分 — 我们会合并它！
+> 🎬 **制作了关于 9Router 的视频？** 提交 [Pull Request](https://github.com/jarjut/9router/pulls)，将你的视频添加到此部分 — 我们会合并它！
 
 ---
 
@@ -1022,7 +1022,7 @@ Model：cc/claude-opus-4-7
 
 ```bash
 # 克隆并安装
-git clone https://github.com/decolua/9router.git
+git clone https://github.com/jarjut/9router.git
 cd 9router
 npm install
 npm run build
@@ -1267,8 +1267,8 @@ Authorization: Bearer your-api-key
 ## 📧 支持
 
 - **网站**：[9router.com](https://9router.com)
-- **GitHub**：[github.com/decolua/9router](https://github.com/decolua/9router)
-- **问题**：[github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **GitHub**：[github.com/jarjut/9router](https://github.com/jarjut/9router)
+- **问题**：[github.com/jarjut/9router/issues](https://github.com/jarjut/9router/issues)
 
 ---
 
@@ -1276,13 +1276,13 @@ Authorization: Bearer your-api-key
 
 感谢所有帮助改进 9Router 的贡献者！
 
-[![Contributors](https://contrib.rocks/image?repo=decolua/9router&max=150&columns=15&anon=1&v=20260309)](https://github.com/decolua/9router/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=jarjut/9router&max=150&columns=15&anon=1&v=20260309)](https://github.com/jarjut/9router/graphs/contributors)
 
 ---
 
 ## 📊 Star 图表
 
-[![Star Chart](https://starchart.cc/decolua/9router.svg?variant=adaptive)](https://starchart.cc/decolua/9router)
+[![Star Chart](https://starchart.cc/jarjut/9router.svg?variant=adaptive)](https://starchart.cc/jarjut/9router)
 
 
 

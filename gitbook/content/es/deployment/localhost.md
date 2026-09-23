@@ -9,7 +9,7 @@ Ejecuta 9Router en tu máquina local para desarrollo y uso personal.
 Instala 9Router globalmente vía npm:
 
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 ```
 
 **Requisitos:**
@@ -81,13 +81,13 @@ Todas tus configuraciones, API keys y combos se preservan en el directorio de da
 Actualiza a la última versión:
 
 ```bash
-npm update -g 9router
+npm update -g @jarjut/9router
 ```
 
 Verifica tu versión actual:
 
 ```bash
-npm list -g 9router
+npm list -g @jarjut/9router
 ```
 
 ---
@@ -113,7 +113,7 @@ Si encuentras errores de permisos durante la instalación:
 
 ```bash
 # Usar sudo (no recomendado)
-sudo npm install -g 9router
+sudo npm install -g @jarjut/9router
 
 # O corregir los permisos de npm (recomendado)
 mkdir ~/.npm-global

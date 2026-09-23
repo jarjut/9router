@@ -172,7 +172,7 @@ Cursor Settings → Models → Advanced:
 **Thay thế:** Self-host trên VPS với domain công khai:
 ```bash
 # Deploy to VPS
-git clone https://github.com/decolua/9router.git
+git clone https://github.com/jarjut/9router.git
 cd 9router/app
 npm install && npm run build
 npm start
@@ -198,7 +198,7 @@ Xem [hướng dẫn tích hợp Cursor](integration/cursor.md) để biết chi 
 
 ### Localhost (Mặc định)
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 9router
 → Dashboard: http://localhost:3000
 → API: http://localhost:20128/v1
@@ -206,7 +206,7 @@ npm install -g 9router
 
 ### VPS/Cloud
 ```bash
-git clone https://github.com/decolua/9router.git
+git clone https://github.com/jarjut/9router.git
 cd 9router/app
 npm install && npm run build
 
@@ -287,7 +287,7 @@ Xem [hướng dẫn deployment](getting-started/installation.md#deployment) đ�
 
 ### Global NPM Install
 ```bash
-npm update -g 9router
+npm update -g @jarjut/9router
 ```
 
 ### Local Install
@@ -301,13 +301,13 @@ npm start
 
 ### Docker
 ```bash
-docker pull 9router:latest
+docker pull jarjut/9router:latest
 docker stop 9router
 docker rm 9router
 docker run -d \
   -p 3000:3000 \
   -v 9router-data:/app/data \
-  9router:latest
+  jarjut/9router:latest
 ```
 
 **Kiểm tra version:**
@@ -316,7 +316,7 @@ docker run -d \
 ```
 
 **Breaking changes:**
-- Xem [CHANGELOG.md](https://github.com/decolua/9router/blob/main/CHANGELOG.md)
+- Xem [CHANGELOG.md](https://github.com/jarjut/9router/blob/main/CHANGELOG.md)
 - Backup `~/.9router` trước khi update lớn
 - Xem hướng dẫn migration cho major version
 
@@ -329,11 +329,11 @@ docker run -d \
 ### Các cách đóng góp:
 
 1. **Report bugs:**
-   - [GitHub Issues](https://github.com/decolua/9router/issues)
+   - [GitHub Issues](https://github.com/jarjut/9router/issues)
    - Bao gồm error logs, các bước reproduce
 
 2. **Request features:**
-   - [GitHub Discussions](https://github.com/decolua/9router/discussions)
+   - [GitHub Discussions](https://github.com/jarjut/9router/discussions)
    - Mô tả use case và lợi ích
 
 3. **Submit code:**
@@ -375,13 +375,13 @@ docker run -d \
 - Cập nhật tài liệu
 - Giữ commit nhỏ gọn và mô tả rõ ràng
 
-Xem [CONTRIBUTING.md](https://github.com/decolua/9router/blob/main/CONTRIBUTING.md) để biết chi tiết.
+Xem [CONTRIBUTING.md](https://github.com/jarjut/9router/blob/main/CONTRIBUTING.md) để biết chi tiết.
 
 ---
 
 ## Cần trợ giúp thêm?
 
 - **Documentation:** [9router.com/docs](https://9router.com/docs)
-- **GitHub:** [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **GitHub:** [github.com/jarjut/9router](https://github.com/jarjut/9router)
+- **Issues:** [github.com/jarjut/9router/issues](https://github.com/jarjut/9router/issues)
 - **Troubleshooting:** [troubleshooting.md](troubleshooting.md)

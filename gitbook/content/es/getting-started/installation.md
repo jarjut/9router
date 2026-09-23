@@ -34,7 +34,7 @@ npm --version
 Instala 9Router globalmente para usar desde cualquier lugar:
 
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 ```
 
 **Iniciar 9Router:**
@@ -46,7 +46,7 @@ npm install -g 9router
 **Beneficios:**
 - ✅ Ejecuta desde cualquier directorio
 - ✅ Comando simple: `9router`
-- ✅ Auto-actualizaciones con `npm update -g 9router`
+- ✅ Auto-actualizaciones con `npm update -g @jarjut/9router`
 
 ### Método 2: Instalación local
 
@@ -55,13 +55,13 @@ Instala en un proyecto específico:
 ```bash
 mkdir my-9router
 cd my-9router
-npm install 9router
+npm install @jarjut/9router
 ```
 
 **Iniciar 9Router:**
 
 ```bash
-npx 9router
+npx @jarjut/9router
 ```
 
 **Beneficios:**
@@ -74,7 +74,7 @@ npx 9router
 Clona y compila desde GitHub:
 
 ```bash
-git clone https://github.com/decolua/9router.git
+git clone https://github.com/jarjut/9router.git
 cd 9router/app
 npm install
 npm run build
@@ -283,7 +283,7 @@ echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
 source ~/.bashrc
 
 # Luego instalar nuevamente
-npm install -g 9router
+npm install -g @jarjut/9router
 ```
 
 ### Versión de Node.js muy antigua
@@ -372,7 +372,7 @@ pm2 save
 ### Desarrollo local
 
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 9router
 ```
 
@@ -382,7 +382,7 @@ npm install -g 9router
 
 ```bash
 # Instalar
-npm install -g 9router
+npm install -g @jarjut/9router
 
 # Configurar
 export JWT_SECRET="your-secure-secret"
@@ -401,7 +401,7 @@ pm2 startup
 ### Docker
 
 ```bash
-docker pull 9router/9router:latest
+docker pull jarjut/9router:latest
 
 docker run -d \
   -p 20128:20128 \
@@ -409,7 +409,7 @@ docker run -d \
   -e INITIAL_PASSWORD="your-password" \
   -v 9router-data:/root/.9router \
   --name 9router \
-  9router/9router:latest
+  jarjut/9router:latest
 ```
 
 **Caso de uso:** Despliegue containerizado, Kubernetes
@@ -444,7 +444,7 @@ server {
 ### Eliminar instalación global
 
 ```bash
-npm uninstall -g 9router
+npm uninstall -g @jarjut/9router
 ```
 
 ### Eliminar el directorio de datos
@@ -474,5 +474,5 @@ nano ~/.bashrc  # o ~/.zshrc
 ## ¿Necesitas ayuda?
 
 - **Sitio web**: [9router.com](https://9router.com)
-- **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **GitHub**: [github.com/jarjut/9router](https://github.com/jarjut/9router)
+- **Issues**: [github.com/jarjut/9router/issues](https://github.com/jarjut/9router/issues)

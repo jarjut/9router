@@ -172,7 +172,7 @@ Cursor Settings → Models → Advanced:
 **替代方案:** 在 VPS 上自托管,使用公开域名:
 ```bash
 # 部署到 VPS
-git clone https://github.com/decolua/9router.git
+git clone https://github.com/jarjut/9router.git
 cd 9router/app
 npm install && npm run build
 npm start
@@ -198,7 +198,7 @@ npm start
 
 ### Localhost(默认)
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 9router
 → 仪表盘: http://localhost:3000
 → API: http://localhost:20128/v1
@@ -206,7 +206,7 @@ npm install -g 9router
 
 ### VPS/云
 ```bash
-git clone https://github.com/decolua/9router.git
+git clone https://github.com/jarjut/9router.git
 cd 9router/app
 npm install && npm run build
 
@@ -287,7 +287,7 @@ npm run deploy:cloudflare
 
 ### 全局 NPM 安装
 ```bash
-npm update -g 9router
+npm update -g @jarjut/9router
 ```
 
 ### 本地安装
@@ -301,13 +301,13 @@ npm start
 
 ### Docker
 ```bash
-docker pull 9router:latest
+docker pull jarjut/9router:latest
 docker stop 9router
 docker rm 9router
 docker run -d \
   -p 3000:3000 \
   -v 9router-data:/app/data \
-  9router:latest
+  jarjut/9router:latest
 ```
 
 **查看版本:**
@@ -316,7 +316,7 @@ docker run -d \
 ```
 
 **破坏性变更:**
-- 查看 [CHANGELOG.md](https://github.com/decolua/9router/blob/main/CHANGELOG.md)
+- 查看 [CHANGELOG.md](https://github.com/jarjut/9router/blob/main/CHANGELOG.md)
 - 大版本更新前备份 `~/.9router`
 - 阅读大版本的迁移指南
 
@@ -329,11 +329,11 @@ docker run -d \
 ### 贡献方式:
 
 1. **报告 bug:**
-   - [GitHub Issues](https://github.com/decolua/9router/issues)
+   - [GitHub Issues](https://github.com/jarjut/9router/issues)
    - 附上错误日志、复现步骤
 
 2. **功能请求:**
-   - [GitHub Discussions](https://github.com/decolua/9router/discussions)
+   - [GitHub Discussions](https://github.com/jarjut/9router/discussions)
    - 描述使用场景和价值
 
 3. **提交代码:**
@@ -375,13 +375,13 @@ docker run -d \
 - 更新文档
 - 提交保持原子化、描述清晰
 
-详情见 [CONTRIBUTING.md](https://github.com/decolua/9router/blob/main/CONTRIBUTING.md)。
+详情见 [CONTRIBUTING.md](https://github.com/jarjut/9router/blob/main/CONTRIBUTING.md)。
 
 ---
 
 ## 需要更多帮助?
 
 - **文档:** [9router.com/docs](https://9router.com/docs)
-- **GitHub:** [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **GitHub:** [github.com/jarjut/9router](https://github.com/jarjut/9router)
+- **Issues:** [github.com/jarjut/9router/issues](https://github.com/jarjut/9router/issues)
 - **故障排除:** [troubleshooting.md](troubleshooting.md)

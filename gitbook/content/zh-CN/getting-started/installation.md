@@ -34,7 +34,7 @@ npm --version
 全局安装,任何位置都能使用:
 
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 ```
 
 **启动 9Router:**
@@ -46,7 +46,7 @@ npm install -g 9router
 **优势:**
 - ✅ 任意目录均可运行
 - ✅ 命令简单:`9router`
-- ✅ 通过 `npm update -g 9router` 自动更新
+- ✅ 通过 `npm update -g @jarjut/9router` 自动更新
 
 ### 方式 2:本地安装
 
@@ -55,13 +55,13 @@ npm install -g 9router
 ```bash
 mkdir my-9router
 cd my-9router
-npm install 9router
+npm install @jarjut/9router
 ```
 
 **启动 9Router:**
 
 ```bash
-npx 9router
+npx @jarjut/9router
 ```
 
 **优势:**
@@ -74,7 +74,7 @@ npx 9router
 从 GitHub 克隆并构建:
 
 ```bash
-git clone https://github.com/decolua/9router.git
+git clone https://github.com/jarjut/9router.git
 cd 9router/app
 npm install
 npm run build
@@ -283,7 +283,7 @@ echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
 source ~/.bashrc
 
 # 然后重新安装
-npm install -g 9router
+npm install -g @jarjut/9router
 ```
 
 ### Node.js 版本过低
@@ -372,7 +372,7 @@ pm2 save
 ### 本地开发
 
 ```bash
-npm install -g 9router
+npm install -g @jarjut/9router
 9router
 ```
 
@@ -382,7 +382,7 @@ npm install -g 9router
 
 ```bash
 # 安装
-npm install -g 9router
+npm install -g @jarjut/9router
 
 # 配置
 export JWT_SECRET="your-secure-secret"
@@ -401,7 +401,7 @@ pm2 startup
 ### Docker
 
 ```bash
-docker pull 9router/9router:latest
+docker pull jarjut/9router:latest
 
 docker run -d \
   -p 20128:20128 \
@@ -409,7 +409,7 @@ docker run -d \
   -e INITIAL_PASSWORD="your-password" \
   -v 9router-data:/root/.9router \
   --name 9router \
-  9router/9router:latest
+  jarjut/9router:latest
 ```
 
 **适用场景:** 容器化部署、Kubernetes
@@ -444,7 +444,7 @@ server {
 ### 移除全局安装
 
 ```bash
-npm uninstall -g 9router
+npm uninstall -g @jarjut/9router
 ```
 
 ### 移除数据目录
@@ -474,5 +474,5 @@ nano ~/.bashrc  # 或 ~/.zshrc
 ## 需要帮助?
 
 - **网站**: [9router.com](https://9router.com)
-- **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **GitHub**: [github.com/jarjut/9router](https://github.com/jarjut/9router)
+- **Issues**: [github.com/jarjut/9router/issues](https://github.com/jarjut/9router/issues)
