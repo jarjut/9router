@@ -1,6 +1,6 @@
 {
   "name": "@jarjut/9router",
-  "version": "0.5.95",
+  "version": "0.5.99",
   "publishConfig": {
     "access": "public"
   },
