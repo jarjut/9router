@@ -1963,6 +1963,7 @@ export default function ProviderDetailPage() {
         isOpen={showEditModal}
         connection={selectedConnection}
         proxyPools={proxyPools}
+        providerModels={[...models, ...customModels]}
         onSave={handleUpdateConnection}
         onClose={() => setShowEditModal(false)}
       />

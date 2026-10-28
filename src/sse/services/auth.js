@@ -6,6 +6,38 @@ import { resolveProviderId, FREE_PROVIDERS } from "@/shared/constants/providers.
 import { getAntigravityQuotaCache, getAntigravityModelQuota } from "./antigravityQuota.js";
 import * as log from "../utils/logger.js";
 
+function cleanModelName(modelName) {
+  if (!modelName || typeof modelName !== "string") return "";
+  const withoutProvider = modelName.includes("/") ? modelName.slice(modelName.indexOf("/") + 1) : modelName;
+  return withoutProvider.replace(/\([^()]+\)\s*$/, "").trim().toLowerCase();
+}
+
+function matchesModel(filterEntry, targetModel) {
+  const cleanFilter = cleanModelName(filterEntry);
+  const cleanTarget = cleanModelName(targetModel);
+  if (!cleanFilter || !cleanTarget) return false;
+  return cleanTarget === cleanFilter || cleanTarget.startsWith(cleanFilter + "-");
+}
+
+export function isModelAllowedForConnection(connection, targetModel) {
+  if (!targetModel || !connection) return true;
+  const enabled = connection.providerSpecificData?.enabledModels;
+  if (Array.isArray(enabled)) {
+    if (enabled.length === 0 || !enabled.some(entry => matchesModel(entry, targetModel))) {
+      return false;
+    }
+  }
+
+  const disabled = connection.providerSpecificData?.disabledModels;
+  if (Array.isArray(disabled) && disabled.length > 0) {
+    if (disabled.some(entry => matchesModel(entry, targetModel))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 // Mutex to prevent race conditions during account selection
 let selectionMutex = Promise.resolve();
 
@@ -87,8 +119,8 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
     const availableConnections = connections.filter(c => {
       if (excludeSet.has(c.id)) return false;
       if (isModelLockActive(c, model)) return false;
-      const enabled = c.providerSpecificData?.enabledModels;
-      if (providerId === "codex" && Array.isArray(enabled) && enabled.length && requestedModel && !enabled.includes(requestedModel)) return false;
+      const targetModel = requestedModel || model;
+      if (!isModelAllowedForConnection(c, targetModel)) return false;
       // Antigravity: skip if live quota exhausted for this model
       if (isAntigravity && model && antigravityQuotaCache) {
         const connQuotas = antigravityQuotaCache.get(c.id);
@@ -106,9 +138,10 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
     connections.forEach(c => {
       const excluded = excludeSet.has(c.id);
       const locked = isModelLockActive(c, model);
-      if (excluded || locked) {
+      const modelNotAllowed = !isModelAllowedForConnection(c, requestedModel || model);
+      if (excluded || locked || modelNotAllowed) {
         const lockUntil = getEarliestModelLockUntil(c);
-        log.debug("AUTH", `  → ${c.id?.slice(0, 8)} | ${excluded ? "excluded" : ""} ${locked ? `modelLocked(${model}) until ${lockUntil}` : ""}`);
+        log.debug("AUTH", `  → ${c.id?.slice(0, 8)} | ${excluded ? "excluded " : ""}${locked ? `modelLocked(${model}) until ${lockUntil} ` : ""}${modelNotAllowed ? `modelFiltered(${requestedModel || model})` : ""}`);
       }
     });
 

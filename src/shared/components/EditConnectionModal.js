@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import PropTypes from "prop-types";
 import Modal from "@/shared/components/Modal";
 import Input from "@/shared/components/Input";
@@ -8,8 +8,10 @@ import Button from "@/shared/components/Button";
 import Badge from "@/shared/components/Badge";
 import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider, AI_PROVIDERS } from "@/shared/constants/providers";
 import Select from "@/shared/components/Select";
+import { cn } from "@/shared/utils/cn";
+import { getModelsByProviderId } from "@/shared/constants/models";
 
-export default function EditConnectionModal({ isOpen, connection, proxyPools, onSave, onClose }) {
+export default function EditConnectionModal({ isOpen, connection, proxyPools, providerModels = [], onSave, onClose }) {
   const [formData, setFormData] = useState({
     name: "",
     priority: 1,
@@ -30,6 +32,9 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [modelFilterMode, setModelFilterMode] = useState("none");
+  const [selectedFilterModels, setSelectedFilterModels] = useState([]);
+  const [modelSearchQuery, setModelSearchQuery] = useState("");
 
   useEffect(() => {
     if (connection) {
@@ -38,6 +43,19 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
         priority: connection.priority || 1,
         apiKey: "",
       });
+      // Load model filter mode & selected models
+      const psd = connection.providerSpecificData || {};
+      if (Array.isArray(psd.disabledModels) && psd.disabledModels.length > 0) {
+        setModelFilterMode("blacklist");
+        setSelectedFilterModels(psd.disabledModels);
+      } else if (Array.isArray(psd.enabledModels) && psd.enabledModels.length > 0) {
+        setModelFilterMode("whitelist");
+        setSelectedFilterModels(psd.enabledModels);
+      } else {
+        setModelFilterMode("none");
+        setSelectedFilterModels([]);
+      }
+      setModelSearchQuery("");
       // Load Azure-specific data if present
       if (connection.provider === "azure" && connection.providerSpecificData) {
         setAzureData({
@@ -70,6 +88,32 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
       setValidationResult(null);
     }
   }, [connection, isOpen]);
+
+  // Combine provider models with any custom models stored in selectedFilterModels
+  const allKnownModels = useMemo(() => {
+    const baseList = (Array.isArray(providerModels) && providerModels.length > 0)
+      ? providerModels
+      : (connection?.provider ? getModelsByProviderId(connection.provider) : []);
+    const list = [...baseList];
+    const knownIds = new Set(list.map((m) => String(typeof m === "string" ? m : m.id || "").toLowerCase()));
+    for (const sel of selectedFilterModels) {
+      if (sel && !knownIds.has(String(sel).toLowerCase())) {
+        list.push({ id: sel, name: sel });
+        knownIds.add(String(sel).toLowerCase());
+      }
+    }
+    return list;
+  }, [providerModels, selectedFilterModels, connection?.provider]);
+
+  const displayedModelList = useMemo(() => {
+    const q = modelSearchQuery.trim().toLowerCase();
+    if (!q) return allKnownModels;
+    return allKnownModels.filter((m) => {
+      const id = (typeof m === "string" ? m : m.id || "").toLowerCase();
+      const name = (typeof m === "string" ? m : m.name || "").toLowerCase();
+      return id.includes(q) || name.includes(q);
+    });
+  }, [allKnownModels, modelSearchQuery]);
 
   const isOAuth = connection?.authType === "oauth";
   const isAzure = connection?.provider === "azure";
@@ -198,6 +242,25 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
       if (providerRegions && region) {
         updates.providerSpecificData = buildRegionSpecificData();
       }
+
+      // Apply model filter updates
+      const modelFilterUpdates = {};
+      if (modelFilterMode === "blacklist") {
+        modelFilterUpdates.disabledModels = selectedFilterModels;
+        modelFilterUpdates.enabledModels = null;
+      } else if (modelFilterMode === "whitelist") {
+        modelFilterUpdates.enabledModels = selectedFilterModels;
+        modelFilterUpdates.disabledModels = null;
+      } else {
+        modelFilterUpdates.disabledModels = null;
+        modelFilterUpdates.enabledModels = null;
+      }
+
+      updates.providerSpecificData = {
+        ...(connection?.providerSpecificData || {}),
+        ...(updates.providerSpecificData || {}),
+        ...modelFilterUpdates,
+      };
       
       await onSave(updates);
     } finally {
@@ -228,6 +291,126 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
           value={formData.priority}
           onChange={(e) => setFormData({ ...formData, priority: Number.parseInt(e.target.value, 10) || 1 })}
         />
+
+        {/* Model Access Filter */}
+        <div className="bg-sidebar/50 p-3.5 rounded-lg border border-accent/20 flex flex-col gap-2.5">
+          <Select
+            label="Model Filter"
+            value={modelFilterMode}
+            onChange={(e) => setModelFilterMode(e.target.value)}
+            options={[
+              { value: "none", label: "None (All models allowed)" },
+              { value: "blacklist", label: "Blacklist (Exclude selected models)" },
+              { value: "whitelist", label: "Whitelist (Only allow selected models)" },
+            ]}
+          />
+
+          {modelFilterMode !== "none" && (
+            <div className="flex flex-col gap-2 pt-1">
+              <p className="text-xs text-text-muted">
+                {modelFilterMode === "blacklist"
+                  ? "Selected models will be skipped and routed to other accounts."
+                  : "Only selected models will be routed to this account."}
+              </p>
+
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Filter models or type model ID..."
+                  value={modelSearchQuery}
+                  onChange={(e) => setModelSearchQuery(e.target.value)}
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const trimmed = modelSearchQuery.trim();
+                      if (!trimmed) return;
+                      const matched = displayedModelList.find((m) => {
+                        const id = String(typeof m === "string" ? m : m.id || "").toLowerCase();
+                        const name = String(typeof m === "string" ? m : m.name || "").toLowerCase();
+                        return id === trimmed.toLowerCase() || name === trimmed.toLowerCase();
+                      });
+                      const targetId = matched ? (typeof matched === "string" ? matched : matched.id) : trimmed;
+                      if (!selectedFilterModels.includes(targetId)) {
+                        setSelectedFilterModels([...selectedFilterModels, targetId]);
+                        setModelSearchQuery("");
+                      }
+                    }
+                  }}
+                />
+                {modelSearchQuery.trim() && !displayedModelList.some(m => (m.id || m) === modelSearchQuery.trim()) && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      const trimmed = modelSearchQuery.trim();
+                      if (trimmed && !selectedFilterModels.includes(trimmed)) {
+                        setSelectedFilterModels([...selectedFilterModels, trimmed]);
+                        setModelSearchQuery("");
+                      }
+                    }}
+                  >
+                    Add
+                  </Button>
+                )}
+              </div>
+
+              {/* Action summary */}
+              <div className="flex items-center justify-between text-xs text-text-muted mt-0.5">
+                <span>
+                  {selectedFilterModels.length} model{selectedFilterModels.length === 1 ? "" : "s"} {modelFilterMode === "blacklist" ? "disabled" : "allowed"}
+                </span>
+                {selectedFilterModels.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedFilterModels([])}
+                    className="text-xs text-red-400 hover:text-red-300 underline"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+
+              {/* Model pills */}
+              <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1.5 p-2 bg-surface-2/60 rounded-lg border border-accent/10">
+                {displayedModelList.length === 0 ? (
+                  <span className="text-xs text-text-muted p-1">No matching models found.</span>
+                ) : (
+                  displayedModelList.map((m) => {
+                    const id = typeof m === "string" ? m : m.id;
+                    const name = typeof m === "string" ? m : (m.name || m.id);
+                    const isSelected = selectedFilterModels.includes(id);
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedFilterModels((prev) =>
+                            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+                          );
+                        }}
+                        className={cn(
+                          "px-2.5 py-1 text-xs rounded-md transition-colors flex items-center gap-1.5 border cursor-pointer",
+                          isSelected
+                            ? modelFilterMode === "blacklist"
+                              ? "bg-red-500/20 text-red-300 border-red-500/40 hover:bg-red-500/30"
+                              : "bg-brand-500/20 text-brand-300 border-brand-500/40 hover:bg-brand-500/30"
+                            : "bg-surface-3/60 text-text-muted border-transparent hover:text-text-main hover:bg-surface-3"
+                        )}
+                      >
+                        <span>{name}</span>
+                        {isSelected && (
+                          <span className="text-[10px] font-bold">
+                            {modelFilterMode === "blacklist" ? "✕" : "✓"}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {!isOAuth && (
           <>
@@ -384,6 +567,7 @@ EditConnectionModal.propTypes = {
     id: PropTypes.string,
     name: PropTypes.string,
   })),
+  providerModels: PropTypes.array,
   onSave: PropTypes.func.isRequired,
   onClose: PropTypes.func.isRequired,
 };
