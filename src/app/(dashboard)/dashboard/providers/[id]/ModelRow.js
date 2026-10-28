@@ -1,15 +1,54 @@
+import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { CapacityBadges } from "@/shared/components";
+import CooldownTimer from "./CooldownTimer";
 
-export default function ModelRow({ model, fullModel, alias, copied, onCopy, testStatus, isCustom, isFree, onDeleteAlias, onTest, isTesting, onDisable, caps, thinkingSuffix }) {
+export default function ModelRow({
+  model,
+  fullModel,
+  alias,
+  copied,
+  onCopy,
+  testStatus,
+  isCustom,
+  isFree,
+  onDeleteAlias,
+  onTest,
+  isTesting,
+  onDisable,
+  caps,
+  thinkingSuffix,
+  cooldownUntil = null,
+  onResetCooldown = null,
+  isResettingCooldown = false,
+}) {
+  const [isCooldown, setIsCooldown] = useState(false);
+
+  useEffect(() => {
+    const checkCooldown = () => {
+      const active = Boolean(cooldownUntil && new Date(cooldownUntil).getTime() > Date.now());
+      setIsCooldown(active);
+    };
+
+    checkCooldown();
+    const interval = cooldownUntil ? setInterval(checkCooldown, 1000) : null;
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [cooldownUntil]);
+
   const displayModel = thinkingSuffix ? `${fullModel}(${thinkingSuffix})` : fullModel;
-  const borderColor = testStatus === "ok"
+  const borderColor = isCooldown
+    ? "border-orange-500/50 bg-orange-500/[0.02]"
+    : testStatus === "ok"
     ? "border-green-500/40"
     : testStatus === "error"
     ? "border-red-500/40"
     : "border-border";
 
-  const iconColor = testStatus === "ok"
+  const iconColor = isCooldown
+    ? "#f97316"
+    : testStatus === "ok"
     ? "#22c55e"
     : testStatus === "error"
     ? "#ef4444"
@@ -22,7 +61,7 @@ export default function ModelRow({ model, fullModel, alias, copied, onCopy, test
           className="material-symbols-outlined shrink-0 text-base mt-0.5 sm:mt-0"
           style={iconColor ? { color: iconColor } : undefined}
         >
-          {testStatus === "ok" ? "check_circle" : testStatus === "error" ? "cancel" : "smart_toy"}
+          {isCooldown ? "schedule" : testStatus === "ok" ? "check_circle" : testStatus === "error" ? "cancel" : "smart_toy"}
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <code className="w-fit max-w-full break-all rounded bg-sidebar px-1.5 py-0.5 font-mono text-xs text-text-muted sm:max-w-[360px] sm:truncate">{displayModel}</code>
@@ -32,6 +71,29 @@ export default function ModelRow({ model, fullModel, alias, copied, onCopy, test
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+          {isCooldown && onResetCooldown && (
+            <div className="relative shrink-0 flex items-center gap-1 mr-1">
+              <CooldownTimer until={cooldownUntil} />
+              <div className="relative shrink-0 group/btn">
+                <button
+                  onClick={() => onResetCooldown(model.id)}
+                  disabled={isResettingCooldown}
+                  className="rounded p-0.5 text-orange-500 transition-colors hover:bg-orange-500/10 hover:text-orange-600 disabled:opacity-50"
+                  title="Reset cooldown for this model"
+                >
+                  <span
+                    className="material-symbols-outlined text-sm"
+                    style={isResettingCooldown ? { animation: "spin 1s linear infinite" } : undefined}
+                  >
+                    {isResettingCooldown ? "progress_activity" : "lock_open"}
+                  </span>
+                </button>
+                <span className="pointer-events-none absolute mt-1 top-5 left-1/2 -translate-x-1/2 text-[10px] text-orange-500 whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity">
+                  {isResettingCooldown ? "Resetting..." : "Reset cooldown"}
+                </span>
+              </div>
+            </div>
+          )}
           {onTest && (
             <div className="relative shrink-0 group/btn">
               <button
@@ -101,4 +163,7 @@ ModelRow.propTypes = {
   onDisable: PropTypes.func,
   caps: PropTypes.object,
   thinkingSuffix: PropTypes.string,
+  cooldownUntil: PropTypes.string,
+  onResetCooldown: PropTypes.func,
+  isResettingCooldown: PropTypes.bool,
 };
