@@ -34,6 +34,8 @@
 # v0.5.112 (2026-10-28)
 
 ## Features
+- **Providers**: add per-connection model filtering (blacklist & whitelist) in Edit Connection modal with instant search and model chip selection, automatically skipping excluded models and routing to other eligible connections
+- **Providers**: add active model cooldown indicator with live countdown timer and one-click cooldown reset (`/api/providers/[id]/cooldown/reset`), clearing `modelLock_<model>` across provider connections and restoring connection status to active
 - **MiniMax Code**: add lease auth mode that rides the desktop app's sign-in through a named-pipe/unix-socket broker (length-prefixed JSON protocol, broker-owned token refresh — no refresh token held locally since MiniMax tokens are single-use), with a dashboard lease button and usage attribution
 - **Nace Drex**: add the `nace` provider to the System One lane with `drex`, `drex-v2.0` and `drex-max`
 - **CommandCode**: align request headers with the official CLI 1.88.0 through a shared `commandCodeHeaders` service
