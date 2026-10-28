@@ -27,6 +27,7 @@ import CustomConfigCard from "./CustomConfigCard";
 import AutoPingScheduleModal from "./AutoPingScheduleModal";
 import WebLoginButton, { WEB_LOGIN_PROVIDERS } from "../components/WebLoginButton.js";
 import { getScheduleSlotLabels } from "@/shared/services/quotaPingSchedule";
+import { useNotificationStore } from "@/store/notificationStore";
 
 const ONE_BY_ONE_DELAY_MS = 1000;
 
@@ -90,6 +91,8 @@ export default function ProviderDetailPage() {
   const stopOneByOneRef = useRef(false);
   const [importingQoderModels, setImportingQoderModels] = useState(false);
   const [importingClineModels, setImportingClineModels] = useState(false);
+  const [resettingCooldownModelId, setResettingCooldownModelId] = useState(null);
+  const notify = useNotificationStore();
   const { copied, copy } = useCopyToClipboard();
 
   const AG_RISK_STORAGE_KEY = "ag_risk_confirmed";
@@ -1159,6 +1162,43 @@ export default function ProviderDetailPage() {
     }
   };
 
+  const getModelCooldownUntil = useCallback((modelId) => {
+    if (!modelId || !connections?.length) return null;
+    const targetKey = `modelLock_${modelId}`;
+    let latest = null;
+    const now = Date.now();
+    for (const conn of connections) {
+      const until = conn[targetKey];
+      if (until && new Date(until).getTime() > now) {
+        if (!latest || new Date(until).getTime() > new Date(latest).getTime()) {
+          latest = until;
+        }
+      }
+    }
+    return latest;
+  }, [connections]);
+
+  const handleResetModelCooldown = async (modelId) => {
+    setResettingCooldownModelId(modelId);
+    try {
+      const res = await fetch(`/api/providers/${providerId}/cooldown/reset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ modelId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to reset cooldown");
+      }
+      notify.success(`Cooldown reset for ${modelId}`);
+      await fetchConnections();
+    } catch (err) {
+      notify.error(err.message || "Failed to reset cooldown");
+    } finally {
+      setResettingCooldownModelId(null);
+    }
+  };
+
   const renderModelsSection = () => {
     if (isCompatible) {
       return (
@@ -1221,6 +1261,9 @@ export default function ProviderDetailPage() {
             isFree={false}
             caps={getCaps(`${providerId}/${model.id}`)}
             thinkingSuffix={resolveThinkingSuffix(model.id)}
+            cooldownUntil={getModelCooldownUntil(model.id)}
+            onResetCooldown={handleResetModelCooldown}
+            isResettingCooldown={resettingCooldownModelId === model.id}
           />
         ))}
 
@@ -1247,6 +1290,9 @@ export default function ProviderDetailPage() {
               onDisable={() => handleDisableModel(model.id)}
               caps={getCaps(`${providerId}/${model.id}`)}
               thinkingSuffix={resolveThinkingSuffix(model.id)}
+              cooldownUntil={getModelCooldownUntil(model.id)}
+              onResetCooldown={handleResetModelCooldown}
+              isResettingCooldown={resettingCooldownModelId === model.id}
             />
           );
         })}
