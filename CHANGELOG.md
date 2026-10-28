@@ -1,3 +1,9 @@
+# v0.5.112 (2026-10-28)
+
+## Features
+- **Providers**: add per-connection model filtering (blacklist & whitelist) in Edit Connection modal with instant search and model chip selection, automatically skipping excluded models and routing to other eligible connections
+- **Providers**: add active model cooldown indicator with live countdown timer and one-click cooldown reset (`/api/providers/[id]/cooldown/reset`), clearing `modelLock_<model>` across provider connections and restoring connection status to active
+
 # v0.5.111 (2026-10-26)
 
 ## Features
