@@ -209,7 +209,7 @@ Set `baseUrl` in connection settings (`providerSpecificData.baseUrl`):
 Data directory resolves to `DATA_DIR` (or `~/.9router/` if unset):
 - **SQLite DB:** `${DATA_DIR}/db/data.sqlite` (accounts, combos, aliases, keys, settings)
 - **Backups:** `${DATA_DIR}/db/backups/`
-- **Usage & Logs:** `${DATA_DIR}/usage.json`, `${DATA_DIR}/log.txt`
+- **Usage & Logs:** `~/.9router/usage.json`, `~/.9router/log.txt`
 
 ---
 
