@@ -115,6 +115,17 @@ describe("buildModelGroups / collectModelValues for Add All Active Models", () =
     expect(values.filter((value) => value === "oc/jev-1.13-free")).toHaveLength(1);
   });
 
+  it("keeps provider models visible when one account has a whitelist", () => {
+    const connections = [
+      { id: "one", provider: "antigravity", isActive: true, providerSpecificData: { enabledModels: ["gemini-4-carbon"] } },
+      { id: "two", provider: "antigravity", isActive: true },
+      { id: "three", provider: "antigravity", isActive: true, providerSpecificData: { disabledModels: ["gemini-3.8-flash"] } },
+    ];
+    const values = collectModelValues(buildModelGroups({ connections, allConnections: connections }));
+    expect(values).toContain("ag/gemini-4-carbon");
+    expect(values).toContain("ag/gemini-3.8-flash");
+  });
+
   it("tolerates empty and missing inputs", () => {
     expect(collectModelValues(buildModelGroups())).toEqual(expect.any(Array));
     expect(collectModelValues({})).toEqual([]);

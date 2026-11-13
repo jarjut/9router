@@ -336,28 +336,6 @@ export function buildModelGroups({
     if (group.models.length === 0) delete groups[providerId];
   });
 
-  // Filter by enabledModels if explicitly configured on any active connection for this provider
-  Object.entries(groups).forEach(([providerId, group]) => {
-    const providerConns = filteredActiveProviders.filter((p) => p.provider === providerId);
-    const explicitEnabled = [];
-    for (const conn of providerConns) {
-      if (Array.isArray(conn.providerSpecificData?.enabledModels) && conn.providerSpecificData.enabledModels.length > 0) {
-        explicitEnabled.push(...conn.providerSpecificData.enabledModels);
-      }
-    }
-    if (explicitEnabled.length > 0) {
-      const enabledSet = new Set(explicitEnabled);
-      const alias = group.alias || getProviderAlias(providerId) || providerId;
-      group.models = group.models.filter((m) =>
-        enabledSet.has(m.id) ||
-        enabledSet.has(m.value) ||
-        enabledSet.has(`${alias}/${m.id}`) ||
-        (m.value && enabledSet.has(m.value.replace(`${alias}/`, "")))
-      );
-      if (group.models.length === 0) delete groups[providerId];
-    }
-  });
-
   return groups;
 }
 

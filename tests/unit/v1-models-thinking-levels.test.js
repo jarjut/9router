@@ -27,6 +27,15 @@ async function listFor(providerId, modelId) {
 }
 
 describe("/v1/models thinking_levels", () => {
+  it("does not apply an account whitelist to the provider catalog", async () => {
+    db.getProviderConnections.mockResolvedValue([
+      { id: "one", provider: "antigravity", isActive: true, providerSpecificData: { enabledModels: ["gemini-4-carbon"] } },
+      { id: "two", provider: "antigravity", isActive: true },
+    ]);
+    const models = await buildModelsList(["llm"]);
+    expect(models.some((model) => model.id === "ag/gemini-3.8-flash")).toBe(true);
+  });
+
   it("publishes the same levels the dashboard picker uses", async () => {
     const entry = await listFor("claude", "claude-haiku-5-5");
     expect(entry).toBeDefined();
