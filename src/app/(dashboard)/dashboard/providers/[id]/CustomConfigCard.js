@@ -80,12 +80,9 @@ export default function CustomConfigCard({ providerId }) {
   }, [rows, builtin, providerId, notify]);
 
   const resetToBuiltin = () => {
-    setRows(Object.entries(builtin).map(([name, value]) => ({ name, value })));
+    const builtinRows = Object.entries(builtin).map(([name, value]) => ({ name, value }));
+    setRows(builtinRows.length ? builtinRows : [{ name: "", value: "" }]);
   };
-
-  // Only render when there is something to customize: registry headers or existing overrides
-  if (Object.keys(builtin).length === 0 && !hasOverride) return null;
-
   return (
     <Card padding="xs">
       <button
