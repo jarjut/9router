@@ -1,3 +1,8 @@
+# v0.5.124 (2026-11-26)
+
+## Features
+- **Providers**: always render the Custom Headers card on provider detail pages (including custom compatible providers without built-in headers or saved overrides yet) and preserve one empty header row on Reset for consistent editing UX.
+
 # v0.5.123 (2026-11-22)
 
 ## Features
