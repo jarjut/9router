@@ -1,11 +1,13 @@
 "use client";
 
 import { useParams, notFound, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, Button, Input, Toggle, ModelSelectModal } from "@/shared/components";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 import { AI_PROVIDERS, MEDIA_PROVIDER_KINDS } from "@/shared/constants/providers";
+import { useDashboardTimeZone } from "@/store/dashboardTimeZoneStore.js";
+import { createRequestTimeFormatter, formatRequestTime } from "@/shared/utils/dashboardTimeZone.js";
 
 // Parse "providerId/model" or just "providerId" → { providerId, model }
 function parseModelEntry(entry) {
@@ -47,6 +49,8 @@ function getListingHref(kind) {
 export default function ComboDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { timeZone } = useDashboardTimeZone();
+  const timeFormatter = useMemo(() => timeZone && createRequestTimeFormatter(timeZone), [timeZone]);
   const [combo, setCombo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
@@ -86,7 +90,7 @@ export default function ComboDetailPage() {
       const s = settingsRes.ok ? await settingsRes.json() : {};
       setRoundRobin(s.comboStrategies?.[c.name]?.fallbackStrategy === "round-robin");
       const allLogs = logsRes.ok ? await logsRes.json() : [];
-      setLogs(allLogs.filter((l) => typeof l === "string" && l.includes(c.name)).slice(0, 50));
+      setLogs(allLogs.filter((log) => log.model.includes(c.name)).slice(0, 50));
     } catch { /* noop */ }
     setLoading(false);
   };
@@ -388,7 +392,10 @@ export default function ComboDetailPage() {
           <p className="text-xs text-text-muted italic">No usage yet.</p>
         ) : (
           <pre className="text-[11px] font-mono bg-black/[0.03] dark:bg-white/[0.03] p-3 rounded-lg overflow-auto max-h-[400px] whitespace-pre-wrap">
-            {logs.join("\n")}
+            {logs.map((log) => [
+              formatRequestTime(timeFormatter, log.timestamp),
+              log.model, log.provider, log.account, log.promptTokens ?? "-", log.completionTokens ?? "-", log.status,
+            ].join(" | ")).join("\n")}
           </pre>
         )}
       </Card>

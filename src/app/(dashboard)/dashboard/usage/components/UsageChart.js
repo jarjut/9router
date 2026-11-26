@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import {
   AreaChart,
@@ -29,29 +29,27 @@ const VIEW_CONFIG = {
   cost:     { dataKey: "cost",     color: "#f59e0b", gradId: "gradCost",     formatter: fmtCost,     label: "Cost" },
 };
 
-export default function UsageChart({ period = "7d" }) {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function UsageChart({ query }) {
+  const [result, setResult] = useState(null);
+  const loading = !query || result?.query !== query;
+  const data = loading ? [] : result.data;
   const [viewMode, setViewMode] = useState("tokens");
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/usage/chart?period=${period}`);
-      if (res.ok) {
-        const json = await res.json();
-        setData(json);
-      }
-    } catch (e) {
-      console.error("Failed to fetch chart data:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [period]);
-
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (!query) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+    fetch(`/api/usage/chart?${query}`, { signal })
+      .then((response) => response.ok ? response.json() : [])
+      .catch((error) => {
+        if (!signal.aborted) console.error("Failed to fetch chart data:", error);
+        return [];
+      })
+      .then((data) => {
+        if (!signal.aborted) setResult({ query, data });
+      });
+    return () => controller.abort();
+  }, [query]);
 
   const cfg = VIEW_CONFIG[viewMode];
   const hasData = data.some((d) => (d[cfg.dataKey] || 0) > 0);
@@ -135,5 +133,5 @@ export default function UsageChart({ period = "7d" }) {
 }
 
 UsageChart.propTypes = {
-  period: PropTypes.string,
+  query: PropTypes.string,
 };

@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Card from "./Card";
+import { useDashboardTimeZone } from "@/store/dashboardTimeZoneStore.js";
+import { createRequestTimeFormatter, formatRequestTime } from "@/shared/utils/dashboardTimeZone.js";
 
 export default function RequestLogger() {
+  const { timeZone } = useDashboardTimeZone();
+  const timeFormatter = useMemo(() => timeZone && createRequestTimeFormatter(timeZone), [timeZone]);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -78,32 +82,29 @@ export default function RequestLogger() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                {logs.map((log, i) => {
-                  const parts = log.split(" | ");
-                  if (parts.length < 7) return null;
-
-                  const status = parts[6];
+                {logs.map((log) => {
+                  const status = log.status.toUpperCase();
                   const isPending = status.includes("PENDING");
                   const isFailed = status.includes("FAILED");
-                  const isSuccess = status.includes("OK");
+                  const isSuccess = status === "OK" || status === "SUCCESS";
 
                   return (
-                    <tr key={i} className={`hover:bg-primary/5 transition-colors ${isPending ? 'bg-primary/5' : ''}`}>
-                      <td className="px-3 py-1.5 border-r border-border text-text-muted">{parts[0]}</td>
-                      <td className="px-3 py-1.5 border-r border-border font-medium">{parts[1]}</td>
+                    <tr key={log.id} className={`hover:bg-primary/5 transition-colors ${isPending ? 'bg-primary/5' : ''}`}>
+                      <td className="px-3 py-1.5 border-r border-border text-text-muted">{formatRequestTime(timeFormatter, log.timestamp)}</td>
+                      <td className="px-3 py-1.5 border-r border-border font-medium">{log.model}</td>
                       <td className="px-3 py-1.5 border-r border-border">
                         <span className="px-1.5 py-0.5 rounded bg-bg-subtle border border-border text-[10px] uppercase font-bold">
-                          {parts[2]}
+                          {log.provider}
                         </span>
                       </td>
-                      <td className="px-3 py-1.5 border-r border-border truncate max-w-[150px]" title={parts[3]}>{parts[3]}</td>
-                      <td className="px-3 py-1.5 border-r border-border text-right text-primary">{parts[4]}</td>
-                      <td className="px-3 py-1.5 border-r border-border text-right text-success">{parts[5]}</td>
+                      <td className="px-3 py-1.5 border-r border-border truncate max-w-[150px]" title={log.account}>{log.account}</td>
+                      <td className="px-3 py-1.5 border-r border-border text-right text-primary">{log.promptTokens ?? "-"}</td>
+                      <td className="px-3 py-1.5 border-r border-border text-right text-success">{log.completionTokens ?? "-"}</td>
                       <td className={`px-3 py-1.5 font-bold ${isSuccess ? 'text-success' :
                           isFailed ? 'text-error' :
                             'text-primary animate-pulse'
                         }`}>
-                        {status}
+                        {log.status}
                       </td>
                     </tr>
                   );
