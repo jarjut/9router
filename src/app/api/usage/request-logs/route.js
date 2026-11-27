@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getRecentLogs } from "@/lib/usageDb";
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const logs = await getRecentLogs(200);
+    const structured = new URL(request.url).searchParams.get("format") === "json";
+    const logs = await getRecentLogs(200, structured);
     return NextResponse.json(logs);
   } catch (error) {
     console.error("[API ERROR] /api/usage/logs failed:", error);

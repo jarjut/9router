@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Card from "@/shared/components/Card";
 import Button from "@/shared/components/Button";
 import Drawer from "@/shared/components/Drawer";
@@ -8,6 +8,8 @@ import Pagination from "@/shared/components/Pagination";
 import { cn } from "@/shared/utils/cn";
 import { AI_PROVIDERS, getProviderByAlias } from "@/shared/constants/providers";
 import { getInputTokens, getOutputTokens, getCachedTokens, getCacheCreationTokens } from "./tokenDisplay";
+import { useDashboardTimeZone } from "@/store/dashboardTimeZoneStore.js";
+import { createRequestTimeFormatter, formatRequestTime, zonedFilterInstant } from "@/shared/utils/dashboardTimeZone.js";
 
 let providerNameCache = null;
 let providerNodesCache = null;
@@ -84,6 +86,8 @@ function CollapsibleSection({ title, children, defaultOpen = false, icon = null 
 }
 
 export default function RequestDetailsTab() {
+  const { timeZone } = useDashboardTimeZone();
+  const timeFormatter = useMemo(() => timeZone && createRequestTimeFormatter(timeZone), [timeZone]);
   const [details, setDetails] = useState([]);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -115,7 +119,9 @@ export default function RequestDetailsTab() {
     }
   }, []);
 
-  const fetchDetails = useCallback(async () => {
+  const filterTimeZone = filters.startDate || filters.endDate ? timeZone : null;
+  const fetchDetails = useCallback(async (signal) => {
+    if ((filters.startDate || filters.endDate) && !filterTimeZone) return;
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -123,27 +129,32 @@ export default function RequestDetailsTab() {
         pageSize: pagination.pageSize.toString()
       });
       if (filters.provider) params.append("provider", filters.provider);
-      if (filters.startDate) params.append("startDate", filters.startDate);
-      if (filters.endDate) params.append("endDate", filters.endDate);
+      const startDate = filters.startDate && zonedFilterInstant(filters.startDate, filterTimeZone);
+      const endDate = filters.endDate && zonedFilterInstant(filters.endDate, filterTimeZone, true);
+      if (startDate) params.set("startDate", startDate);
+      if (endDate) params.set("endDate", endDate);
 
-      const res = await fetch(`/api/usage/request-details?${params}`);
+      const res = await fetch(`/api/usage/request-details?${params}`, { signal });
       const data = await res.json();
-
-      setDetails(data.details || []);
-      setPagination(prev => ({ ...prev, ...data.pagination }));
+      if (!signal.aborted) {
+        setDetails(data.details || []);
+        setPagination(prev => ({ ...prev, ...data.pagination }));
+      }
     } catch (error) {
-      console.error("Failed to fetch request details:", error);
+      if (!signal.aborted) console.error("Failed to fetch request details:", error);
     } finally {
-      setLoading(false);
+      if (!signal.aborted) setLoading(false);
     }
-  }, [pagination.page, pagination.pageSize, filters]);
+  }, [pagination.page, pagination.pageSize, filters, filterTimeZone]);
 
   useEffect(() => {
     fetchProviders();
   }, [fetchProviders]);
 
   useEffect(() => {
-    fetchDetails();
+    const controller = new AbortController();
+    fetchDetails(controller.signal);
+    return () => controller.abort();
   }, [fetchDetails]);
 
   const handleViewDetail = (detail) => {
@@ -270,7 +281,7 @@ export default function RequestDetailsTab() {
                     className="border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
                   >
                     <td className="whitespace-nowrap p-4 text-sm text-text-main">
-                      {new Date(detail.timestamp).toLocaleString()}
+                      {formatRequestTime(timeFormatter, detail.timestamp)}
                     </td>
                     <td className="max-w-[260px] truncate p-4 font-mono text-sm text-text-main">
                       {detail.model}
@@ -342,7 +353,7 @@ export default function RequestDetailsTab() {
               </div>
               <div>
                 <span className="text-text-muted">Timestamp:</span>{" "}
-                <span className="text-text-main">{new Date(selectedDetail.timestamp).toLocaleString()}</span>
+                <span className="text-text-main">{formatRequestTime(timeFormatter, selectedDetail.timestamp)}</span>
               </div>
               <div>
                  <span className="text-text-muted">Provider:</span>{" "}

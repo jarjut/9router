@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import PropTypes from "prop-types";
 import {
   AreaChart,
@@ -29,32 +29,12 @@ const VIEW_CONFIG = {
   cost:     { dataKey: "cost",     color: "#f59e0b", gradId: "gradCost",     formatter: fmtCost,     label: "Cost" },
 };
 
-export default function UsageChart({ period = "7d" }) {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function UsageChart({ data }) {
   const [viewMode, setViewMode] = useState("tokens");
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/usage/chart?period=${period}`);
-      if (res.ok) {
-        const json = await res.json();
-        setData(json);
-      }
-    } catch (e) {
-      console.error("Failed to fetch chart data:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [period]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   const cfg = VIEW_CONFIG[viewMode];
-  const hasData = data.some((d) => (d[cfg.dataKey] || 0) > 0);
+  const hasData = data?.some((d) => (d[cfg.dataKey] || 0) > 0);
 
   return (
     <Card className="flex min-w-0 flex-col gap-3 p-3 sm:p-4">
@@ -73,8 +53,10 @@ export default function UsageChart({ period = "7d" }) {
         ))}
       </div>
 
-      {loading ? (
+      {data === undefined ? (
         <div className="h-48 flex items-center justify-center text-text-muted text-sm">Loading...</div>
+      ) : data === null ? (
+        <div className="h-48 flex items-center justify-center text-text-muted text-sm">Chart unavailable</div>
       ) : !hasData ? (
         <div className="h-48 flex items-center justify-center text-text-muted text-sm">No data for this period</div>
       ) : (
@@ -135,5 +117,5 @@ export default function UsageChart({ period = "7d" }) {
 }
 
 UsageChart.propTypes = {
-  period: PropTypes.string,
+  data: PropTypes.arrayOf(PropTypes.object),
 };

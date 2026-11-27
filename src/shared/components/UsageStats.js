@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { FREE_PROVIDERS, AI_PROVIDERS } from "@/shared/constants/providers";
 
@@ -15,6 +15,8 @@ import Card from "./Card";
 import OverviewCards from "@/app/(dashboard)/dashboard/usage/components/OverviewCards";
 import UsageTable, { fmt, fmtTime } from "@/app/(dashboard)/dashboard/usage/components/UsageTable";
 import dynamic from "next/dynamic";
+import { useDashboardTimeZone } from "@/store/dashboardTimeZoneStore.js";
+import { getZonedDateKey, getZonedDayBounds } from "@/shared/utils/dashboardTimeZone.js";
 // Lazy-load: keeps @xyflow/react and recharts out of the initial bundle
 const ProviderTopology = dynamic(() => import("@/app/(dashboard)/dashboard/usage/components/ProviderTopology"), { ssr: false });
 const UsageChart = dynamic(() => import("@/app/(dashboard)/dashboard/usage/components/UsageChart"), { ssr: false });
@@ -203,6 +205,42 @@ const PERIODS = [
   { value: "all", label: "All" },
 ];
 
+function useUsageQuery(period) {
+  const { timeZone } = useDashboardTimeZone();
+  const [today, setToday] = useState(null);
+
+  useEffect(() => {
+    if (period !== "today" || !timeZone) return;
+    let timer;
+    const update = () => {
+      clearTimeout(timer);
+      const date = getZonedDateKey(Date.now(), timeZone);
+      setToday((value) => value?.date === date && value.timeZone === timeZone ? value : { date, timeZone });
+      const { endMs } = getZonedDayBounds(date, timeZone);
+      timer = setTimeout(update, Math.max(1, endMs - Date.now()));
+    };
+    update();
+    window.addEventListener("focus", update);
+    document.addEventListener("visibilitychange", update);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("focus", update);
+      document.removeEventListener("visibilitychange", update);
+    };
+  }, [period, timeZone]);
+
+  const params = new URLSearchParams({ period });
+  if (period === "today" || period === "24h") {
+    if (!timeZone) return null;
+    params.set("timeZone", timeZone);
+  }
+  if (period === "today") {
+    if (today?.timeZone !== timeZone) return null;
+    params.set("date", today.date);
+  }
+  return params.toString();
+}
+
 export default function UsageStats({ period: periodProp, setPeriod: setPeriodProp, hidePeriodSelector = false } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -210,17 +248,19 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
   const sortBy = searchParams.get("sortBy") || "rawModel";
   const sortOrder = searchParams.get("sortOrder") || "asc";
 
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [fetching, setFetching] = useState(false);
+  const [result, setResult] = useState(null);
+  const [attempt, setAttempt] = useState(0);
   const [tableView, setTableView] = useState("model");
   const [viewMode, setViewMode] = useState("costs");
   const [providers, setProviders] = useState([]);
   const [periodLocal, setPeriodLocal] = useState("today");
-  const isInitialLoad = useRef(true);
-  const hasLoadedStats = useRef(false);
   const period = periodProp ?? periodLocal;
   const setPeriod = setPeriodProp ?? setPeriodLocal;
+  const usageQuery = useUsageQuery(period);
+  const loading = !usageQuery || result?.query !== usageQuery || result.attempt !== attempt;
+  const stats = loading ? null : result.stats;
+  const chart = loading ? undefined : result.chart;
+  const fetching = loading && result !== null;
 
   // Fetch connected providers once, deduplicate by provider type
   // Always include noAuth free providers (e.g. opencode) regardless of connections
@@ -255,30 +295,25 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
       .catch(() => {});
   }, []);
 
-  // Fetch filtered stats via REST when period changes
+  // The chart and summary share one explicit local date across midnight.
   useEffect(() => {
-    // First load: show full spinner; subsequent: show subtle fetching indicator
-    if (isInitialLoad.current) {
-      isInitialLoad.current = false;
-      setLoading(true);
-    } else {
-      setFetching(true);
-    }
-
-    fetch(`/api/usage/stats?period=${period}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => {
-        if (data) {
-          hasLoadedStats.current = true;
-          setStats((prev) => ({ ...prev, ...data }));
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        setLoading(false);
-        setFetching(false);
-      });
-  }, [period]);
+    if (!usageQuery) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+    let invalidTimeOptions = false;
+    Promise.all(["stats", "chart"].map(async (endpoint) => {
+      try {
+        const response = await fetch(`/api/usage/${endpoint}?${usageQuery}`, { signal });
+        if (response.status === 400) invalidTimeOptions = true;
+        return response.ok ? await response.json() : null;
+      } catch {
+        return null;
+      }
+    })).then(([stats, chart]) => {
+      if (!signal.aborted) setResult({ query: usageQuery, attempt, stats, chart, invalidTimeOptions });
+    });
+    return () => controller.abort();
+  }, [usageQuery, attempt]);
 
   // SSE connection - real-time updates for activeRequests + recentRequests only
   useEffect(() => {
@@ -288,23 +323,23 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
       try {
         const data = JSON.parse(e.data);
         // Always merge only real-time fields, never overwrite full stats from REST
-        setStats((prev) => {
-          if (!prev) return prev;
+        setResult((prev) => {
+          if (!prev?.stats) return prev;
           return {
             ...prev,
-            activeRequests: data.activeRequests,
-            recentRequests: data.recentRequests,
-            errorProvider: data.errorProvider,
-            pending: data.pending,
+            stats: {
+              ...prev.stats,
+              activeRequests: data.activeRequests,
+              recentRequests: data.recentRequests,
+              errorProvider: data.errorProvider,
+              pending: data.pending,
+            },
           };
         });
-        if (hasLoadedStats.current) setLoading(false);
       } catch (err) {
         console.error("[SSE CLIENT] parse error:", err);
       }
     };
-
-    es.onerror = () => setLoading(false);
 
     return () => es.close();
   }, []);
@@ -437,8 +472,6 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
     }
   }, [stats, tableView, sortBy, sortOrder]);
 
-  if (!stats && !loading) return <div className="text-text-muted">Failed to load usage statistics.</div>;
-
   const spinner = (
     <div className="flex items-center justify-center py-12 text-text-muted">
       <span className="material-symbols-outlined text-[32px] animate-spin">progress_activity</span>
@@ -469,10 +502,20 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
       )}
 
       {/* Overview cards */}
-      {loading ? spinner : <OverviewCards stats={stats} />}
+      {loading ? spinner : stats && <OverviewCards stats={stats} />}
+      {!loading && (!stats || !chart) && (
+        <div className="flex items-center gap-3 text-text-muted" role="status">
+          {result.invalidTimeOptions
+            ? "This time zone or date is not supported by the server. Try another time zone in Profile."
+            : "Failed to load usage data."}
+          <button type="button" className="text-primary underline" onClick={() => setAttempt((value) => value + 1)}>
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Provider topology + Recent Requests */}
-      {loading ? spinner : (
+      {stats && (
         <div className="grid min-w-0 grid-cols-1 items-stretch gap-2 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
           <ProviderTopology
             providers={providers}
@@ -485,10 +528,10 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
       )}
 
       {/* Token / Cost chart - sync period */}
-      {loading ? spinner : <UsageChart period={period} />}
+      <UsageChart data={chart} />
 
       {/* Provider and model breakdown charts */}
-      {!loading && (stats.byProvider || stats.byModel) && (
+      {(stats?.byProvider || stats?.byModel) && (
         <div className="grid min-w-0 grid-cols-1 gap-2 lg:grid-cols-2">
           <ProviderBarChart byProvider={stats.byProvider} />
           <TopModelsChart byModel={stats.byModel} />

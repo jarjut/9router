@@ -1,7 +1,11 @@
-# v0.5.124 (2026-11-26)
+# v0.5.125 (2026-11-27)
 
 ## Features
+- **Dashboard**: Profile → Time zone follows the browser by default and can be overridden on that browser. Request timestamps use the selected zone; Usage → Today uses its local day for the chart and totals, and Retry reloads both. Rolling 24h stays rolling, and longer daily rollups are unchanged.
 - **Providers**: always render the Custom Headers card on provider detail pages (including custom compatible providers without built-in headers or saved overrides yet) and preserve one empty header row on Reset for consistent editing UX.
+
+## Fixes
+- **Usage**: keep raw API keys out of usage statistics without merging distinct usage buckets.
 
 # v0.5.123 (2026-11-22)
 
