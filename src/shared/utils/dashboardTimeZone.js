@@ -90,8 +90,19 @@ export function getZonedDayBounds(date, timeZone) {
   const nextMidnight = utcMidnight + DAY_MS;
   const nextDate = new Date(nextMidnight).toISOString().slice(0, 10);
   const startMs = startOfZonedDate(formatter, date, utcMidnight, offsetAt);
-  const endMs = startOfZonedDate(formatter, nextDate, nextMidnight, offsetAt);
-  return startMs < endMs ? { startMs, endMs } : null;
+  const nextStart = startOfZonedDate(formatter, nextDate, nextMidnight, offsetAt);
+  if (startMs >= nextStart) return null;
+
+  // A clock change just after midnight can briefly return to the previous date.
+  const repeatsDate = (wallMs, first, key) => {
+    const last = wallMs - offsetAt(wallMs + DAY_MS);
+    return last > first && offsetAt(last) === wallMs - last && dayKey(formatter, last - 1) < key ? last : null;
+  };
+  const lastEnd = repeatsDate(nextMidnight, nextStart, nextDate);
+  const matchesDate = (lastEnd || repeatsDate(utcMidnight, startMs, date))
+    ? (ms) => dayKey(formatter, ms) === date
+    : null;
+  return { startMs, endMs: lastEnd || nextStart, matchesDate };
 }
 
 export function createRequestTimeFormatter(timeZone) {

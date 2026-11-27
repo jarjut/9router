@@ -210,7 +210,7 @@ function useUsageQuery(period) {
   const [today, setToday] = useState(null);
 
   useEffect(() => {
-    if (!timeZone) return;
+    if (period !== "today" || !timeZone) return;
     let timer;
     const update = () => {
       clearTimeout(timer);
@@ -227,7 +227,7 @@ function useUsageQuery(period) {
       window.removeEventListener("focus", update);
       document.removeEventListener("visibilitychange", update);
     };
-  }, [timeZone]);
+  }, [period, timeZone]);
 
   const params = new URLSearchParams({ period });
   if (period === "today" || period === "24h") {
@@ -249,7 +249,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
   const sortOrder = searchParams.get("sortOrder") || "asc";
 
   const [result, setResult] = useState(null);
-  const [statsAttempt, setStatsAttempt] = useState(0);
+  const [attempt, setAttempt] = useState(0);
   const [tableView, setTableView] = useState("model");
   const [viewMode, setViewMode] = useState("costs");
   const [providers, setProviders] = useState([]);
@@ -257,8 +257,9 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
   const period = periodProp ?? periodLocal;
   const setPeriod = setPeriodProp ?? setPeriodLocal;
   const usageQuery = useUsageQuery(period);
-  const loading = !usageQuery || result?.query !== usageQuery || result.attempt !== statsAttempt;
+  const loading = !usageQuery || result?.query !== usageQuery || result.attempt !== attempt;
   const stats = loading ? null : result.stats;
+  const chart = loading ? undefined : result.chart;
   const fetching = loading && result !== null;
 
   // Fetch connected providers once, deduplicate by provider type
@@ -299,14 +300,20 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
     if (!usageQuery) return;
     const controller = new AbortController();
     const { signal } = controller;
-    fetch(`/api/usage/stats?${usageQuery}`, { signal })
-      .then((response) => response.ok ? response.json() : null)
-      .catch(() => null)
-      .then((data) => {
-        if (!signal.aborted) setResult({ query: usageQuery, attempt: statsAttempt, stats: data });
-      });
+    let invalidTimeOptions = false;
+    Promise.all(["stats", "chart"].map(async (endpoint) => {
+      try {
+        const response = await fetch(`/api/usage/${endpoint}?${usageQuery}`, { signal });
+        if (response.status === 400) invalidTimeOptions = true;
+        return response.ok ? await response.json() : null;
+      } catch {
+        return null;
+      }
+    })).then(([stats, chart]) => {
+      if (!signal.aborted) setResult({ query: usageQuery, attempt, stats, chart, invalidTimeOptions });
+    });
     return () => controller.abort();
-  }, [usageQuery, statsAttempt]);
+  }, [usageQuery, attempt]);
 
   // SSE connection - real-time updates for activeRequests + recentRequests only
   useEffect(() => {
@@ -495,10 +502,13 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
       )}
 
       {/* Overview cards */}
-      {loading ? spinner : stats ? <OverviewCards stats={stats} /> : (
+      {loading ? spinner : stats && <OverviewCards stats={stats} />}
+      {!loading && (!stats || !chart) && (
         <div className="flex items-center gap-3 text-text-muted" role="status">
-          Failed to load usage statistics.
-          <button type="button" className="text-primary underline" onClick={() => setStatsAttempt((attempt) => attempt + 1)}>
+          {result.invalidTimeOptions
+            ? "This time zone or date is not supported by the server. Try another time zone in Profile."
+            : "Failed to load usage data."}
+          <button type="button" className="text-primary underline" onClick={() => setAttempt((value) => value + 1)}>
             Retry
           </button>
         </div>
@@ -518,7 +528,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
       )}
 
       {/* Token / Cost chart - sync period */}
-      <UsageChart query={usageQuery} />
+      <UsageChart data={chart} />
 
       {/* Provider and model breakdown charts */}
       {(stats?.byProvider || stats?.byModel) && (

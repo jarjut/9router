@@ -38,11 +38,12 @@ export function getEffectiveDashboardTimeZone() {
 export function setDashboardTimeZoneOverride(value) {
   const zone = normalizeDashboardTimeZone(value);
   if (value !== null && !zone) return;
+  readOverride();
   override = zone;
-  lastStored = zone;
   try {
     if (zone) window.localStorage.setItem(STORAGE_KEY, zone);
     else window.localStorage.removeItem(STORAGE_KEY);
+    lastStored = zone;
   } catch {
     // The in-memory value still applies when browser storage is blocked.
   }

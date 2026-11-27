@@ -29,7 +29,7 @@ export default function RequestLogger() {
   const fetchLogs = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const res = await fetch("/api/usage/request-logs");
+      const res = await fetch("/api/usage/request-logs?format=json");
       if (res.ok) {
         const data = await res.json();
         setLogs(data);

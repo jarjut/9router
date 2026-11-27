@@ -10,6 +10,7 @@ let priorDataDir;
 let chart;
 let stats;
 let logs;
+let comboLogs;
 
 beforeAll(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "9router-timezone-"));
@@ -23,6 +24,7 @@ beforeAll(async () => {
   chart = (await import("@/app/api/usage/chart/route.js")).GET;
   stats = (await import("@/app/api/usage/stats/route.js")).GET;
   logs = (await import("@/app/api/usage/request-logs/route.js")).GET;
+  comboLogs = (await import("@/app/api/usage/logs/route.js")).GET;
 });
 
 afterAll(() => {
@@ -98,6 +100,17 @@ describe("Usage calendar timezone", () => {
     expect(totalRequests(skipped)).toBe(1);
   });
 
+  it("counts a request on its local date when the clock returns to the previous day", async () => {
+    await record("2009-11-01T02:30:30.000Z"); // November 1, before the rollback
+    await record("2009-11-01T03:00:00.000Z"); // October 31, after the rollback
+    await record("2009-11-01T03:30:30.000Z"); // November 1 again
+    for (const [date, requests] of [["2009-10-31", 1], ["2009-11-01", 2]]) {
+      const query = usageQuery({ timeZone: "America/St_Johns", date });
+      expect(totalRequests(await (await chart(query)).json())).toBe(requests);
+      expect((await (await stats(query)).json()).totalRequests).toBe(requests);
+    }
+  });
+
   it("keeps 24h rolling and leaves historical daily rollups alone", async () => {
     const clock = vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-11-02T04:00:00Z"));
     try {
@@ -118,15 +131,19 @@ describe("Usage calendar timezone", () => {
     }
   });
 
-  it("serves structured logs with UTC timestamps and preserves delimiters in field values", async () => {
+  it("keeps text logs by default and serves structured UTC logs on request", async () => {
     await record("2026-11-26T20:30:00.000Z", "combo | test");
-    const response = await logs();
-    const rows = await response.json();
-    expect(rows).toContainEqual(expect.objectContaining({
-      timestamp: "2026-11-26T20:30:00.000Z",
-      model: "combo | test",
-      promptTokens: 2,
-      completionTokens: 1,
-    }));
+    for (const endpoint of [logs, comboLogs]) {
+      const url = "http://localhost/api/usage/logs";
+      const legacy = await (await endpoint(new Request(url))).json();
+      expect(legacy).toContainEqual(expect.stringMatching(/ \| combo \| test \| OPENAI \| - \| 2 \| 1 \| /));
+      const rows = await (await endpoint(new Request(`${url}?format=json`))).json();
+      expect(rows).toContainEqual(expect.objectContaining({
+        timestamp: "2026-11-26T20:30:00.000Z",
+        model: "combo | test",
+        promptTokens: 2,
+        completionTokens: 1,
+      }));
+    }
   });
 });

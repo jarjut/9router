@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import { createHash } from "node:crypto";
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
 import { getMeta, setMeta } from "../helpers/metaStore.js";
@@ -15,7 +16,7 @@ function maskApiKey(key) {
 const PENDING_TIMEOUT_MS = 60 * 1000;
 const RING_CAP = 50;
 const CONN_CACHE_TTL_MS = 30 * 1000;
-const PERIOD_MS = { "24h": 86400000, "7d": 604800000, "30d": 2592000000, "60d": 5184000000 };
+const HOUR_MS = 3_600_000;
 
 // In-memory state shared across Next.js modules
 if (!global._pendingRequests) global._pendingRequests = { byModel: {}, byAccount: {} };
@@ -577,13 +578,14 @@ export async function getUsageStats(period = "all", options = {}) {
     }
   } else {
     // 24h / today: live history
-    const { startMs, endMs } = getLiveUsageRange(period, options, now.getTime());
+    const { startMs, endMs, matchesDate } = getLiveUsageRange(period, options, now.getTime());
     const filtered = db.all(
       `SELECT timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost, tokens FROM usageHistory WHERE timestamp >= ? AND timestamp < ?`,
       [new Date(startMs).toISOString(), new Date(endMs).toISOString()]
     );
 
     for (const r of filtered) {
+      if (matchesDate && !matchesDate(Date.parse(r.timestamp))) continue;
       const tokens = parseJson(r.tokens, {}) || {};
       const promptTokens = tokens.prompt_tokens || tokens.input_tokens || r.promptTokens || 0;
       const completionTokens = tokens.completion_tokens || tokens.output_tokens || r.completionTokens || 0;
@@ -663,20 +665,23 @@ export async function getUsageStats(period = "all", options = {}) {
   }
 
   stats.totalRequests = Object.values(stats.byProvider).reduce((sum, p) => sum + (p.requests || 0), 0);
+  // Preserve distinct internal buckets without exposing their credential-bearing keys.
+  stats.byApiKey = Object.fromEntries(Object.entries(stats.byApiKey).map(([key, entry]) => [
+    key === "local-no-key" ? key : createHash("sha256").update(key).digest("hex"), entry,
+  ]));
   return stats;
 }
 
-function getLiveUsageRange(period, { timeZone, date, dayBounds }, now) {
-  if (period === "24h") return { startMs: now - PERIOD_MS["24h"], endMs: now + 1 };
-  return dayBounds || getZonedDayBounds(date || getZonedDateKey(now, timeZone), timeZone);
+function getLiveUsageRange(period, { timeZone, dayBounds }, now) {
+  if (period === "24h") return { startMs: now - 24 * HOUR_MS, endMs: now + 1 };
+  return dayBounds || getZonedDayBounds(getZonedDateKey(now, timeZone), timeZone);
 }
 
 function makeHourlyBuckets(startMs, endMs, timeZone) {
-  const hourMs = 3_600_000;
   const format = new Intl.DateTimeFormat("en", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   const counts = new Map();
-  const buckets = Array.from({ length: Math.ceil((endMs - startMs) / hourMs) }, (_, i) => {
-    const label = format.format(startMs + i * hourMs);
+  const buckets = Array.from({ length: Math.ceil((endMs - startMs) / HOUR_MS) }, (_, i) => {
+    const label = format.format(startMs + i * HOUR_MS);
     counts.set(label, (counts.get(label) || 0) + 1);
     return { label, tokens: 0, cost: 0, requests: 0 };
   });
@@ -685,7 +690,7 @@ function makeHourlyBuckets(startMs, endMs, timeZone) {
     for (let i = 0; i < buckets.length; i++) {
       const bucket = buckets[i];
       if (counts.get(bucket.label) > 1) {
-        const offset = offsetFormat.formatToParts(startMs + i * hourMs).find(({ type }) => type === "timeZoneName").value;
+        const offset = offsetFormat.formatToParts(startMs + i * HOUR_MS).find(({ type }) => type === "timeZoneName").value;
         bucket.label += ` ${offset}`;
       }
     }
@@ -698,16 +703,18 @@ export async function getChartData(period = "7d", options = {}) {
   const now = Date.now();
 
   if (period === "today" || period === "24h") {
-    const { startMs, endMs } = getLiveUsageRange(period, options, now);
+    const { startMs, endMs, matchesDate } = getLiveUsageRange(period, options, now);
     const buckets = makeHourlyBuckets(startMs, period === "24h" ? now : endMs, options.timeZone);
     const rows = db.all(
       `SELECT timestamp, promptTokens, completionTokens, cost FROM usageHistory WHERE timestamp >= ? AND timestamp < ?`,
       [new Date(startMs).toISOString(), new Date(endMs).toISOString()]
     );
     for (const row of rows) {
-      const elapsed = Date.parse(row.timestamp) - startMs;
+      const instant = Date.parse(row.timestamp);
+      const elapsed = instant - startMs;
       if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed >= endMs - startMs) continue;
-      const bucket = buckets[Math.min(Math.floor(elapsed / 3_600_000), buckets.length - 1)];
+      if (matchesDate && !matchesDate(instant)) continue;
+      const bucket = buckets[Math.min(Math.floor(elapsed / HOUR_MS), buckets.length - 1)];
       bucket.tokens += (row.promptTokens || 0) + (row.completionTokens || 0);
       bucket.cost += row.cost || 0;
       bucket.requests++;
@@ -767,7 +774,12 @@ export async function getChartData(period = "7d", options = {}) {
 // No-op: request log is now derived from usageHistory table on read.
 export async function appendRequestLog() {}
 
-export async function getRecentLogs(limit = 200) {
+function formatLogDate(date) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+export async function getRecentLogs(limit = 200, structured = false) {
   try {
     const db = await getAdapter();
     const rows = db.all(
@@ -785,7 +797,7 @@ export async function getRecentLogs(limit = 200) {
 
     return rows.map((r) => {
       const tokens = r.tokens ? parseJson(r.tokens, {}) : {};
-      return {
+      const log = {
         id: r.id,
         timestamp: r.timestamp,
         model: r.model || "-",
@@ -795,6 +807,8 @@ export async function getRecentLogs(limit = 200) {
         completionTokens: r.completionTokens ?? tokens?.completion_tokens ?? null,
         status: r.status || "-",
       };
+      if (structured) return log;
+      return `${formatLogDate(new Date(log.timestamp))} | ${log.model} | ${log.provider} | ${log.account} | ${log.promptTokens ?? "-"} | ${log.completionTokens ?? "-"} | ${log.status}`;
     });
   } catch (e) {
     console.error("[usageRepo] getRecentLogs failed:", e.message);

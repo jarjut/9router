@@ -19,9 +19,9 @@ afterEach(() => {
 });
 
 describe("Usage stats API key attribution", () => {
-  it("keeps API keys with the same masked prefix in separate buckets", async () => {
+  it("keeps keys with the same mask separate without exposing them in live or daily stats", async () => {
     const apiKeyA = "sk-machine-aaaaaa-11111111";
-    const apiKeyB = "sk-machine-bbbbbb-22222222";
+    const apiKeyB = "sk-machine-bbbbbb-11111111";
 
     await db.saveRequestUsage({
       provider: "openai",
@@ -43,15 +43,13 @@ describe("Usage stats API key attribution", () => {
       status: "ok",
     });
 
-    const stats = await db.getUsageStats("24h");
-    const apiKeyEntries = Object.values(stats.byApiKey);
-
-    expect(apiKeyEntries).toHaveLength(2);
-
-    expect(
-      apiKeyEntries
-        .map((entry) => entry.promptTokens)
-        .sort((a, b) => a - b)
-    ).toEqual([10, 20]);
+    for (const period of ["today", "24h", "all"]) {
+      const stats = await db.getUsageStats(period);
+      const apiKeyEntries = Object.values(stats.byApiKey);
+      expect(apiKeyEntries.map((entry) => entry.promptTokens).sort((a, b) => a - b)).toEqual([10, 20]);
+      const json = JSON.stringify(stats);
+      expect(json).not.toContain(apiKeyA);
+      expect(json).not.toContain(apiKeyB);
+    }
   });
 });

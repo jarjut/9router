@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import PropTypes from "prop-types";
 import {
   AreaChart,
@@ -29,30 +29,12 @@ const VIEW_CONFIG = {
   cost:     { dataKey: "cost",     color: "#f59e0b", gradId: "gradCost",     formatter: fmtCost,     label: "Cost" },
 };
 
-export default function UsageChart({ query }) {
-  const [result, setResult] = useState(null);
-  const loading = !query || result?.query !== query;
-  const data = loading ? [] : result.data;
+export default function UsageChart({ data }) {
   const [viewMode, setViewMode] = useState("tokens");
 
-  useEffect(() => {
-    if (!query) return;
-    const controller = new AbortController();
-    const { signal } = controller;
-    fetch(`/api/usage/chart?${query}`, { signal })
-      .then((response) => response.ok ? response.json() : [])
-      .catch((error) => {
-        if (!signal.aborted) console.error("Failed to fetch chart data:", error);
-        return [];
-      })
-      .then((data) => {
-        if (!signal.aborted) setResult({ query, data });
-      });
-    return () => controller.abort();
-  }, [query]);
 
   const cfg = VIEW_CONFIG[viewMode];
-  const hasData = data.some((d) => (d[cfg.dataKey] || 0) > 0);
+  const hasData = data?.some((d) => (d[cfg.dataKey] || 0) > 0);
 
   return (
     <Card className="flex min-w-0 flex-col gap-3 p-3 sm:p-4">
@@ -71,8 +53,10 @@ export default function UsageChart({ query }) {
         ))}
       </div>
 
-      {loading ? (
+      {data === undefined ? (
         <div className="h-48 flex items-center justify-center text-text-muted text-sm">Loading...</div>
+      ) : data === null ? (
+        <div className="h-48 flex items-center justify-center text-text-muted text-sm">Chart unavailable</div>
       ) : !hasData ? (
         <div className="h-48 flex items-center justify-center text-text-muted text-sm">No data for this period</div>
       ) : (
@@ -133,5 +117,5 @@ export default function UsageChart({ query }) {
 }
 
 UsageChart.propTypes = {
-  query: PropTypes.string,
+  data: PropTypes.arrayOf(PropTypes.object),
 };

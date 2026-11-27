@@ -37,6 +37,15 @@ it("follows the browser until explicitly overridden and removes the override on 
   expect(reloaded.getEffectiveDashboardTimeZone()).toBe(browserZone);
 });
 
+it("keeps a session override when storage can be read but not written", async () => {
+  const { localStorage } = browser();
+  localStorage.setItem(key, "Pacific/Auckland");
+  const { getEffectiveDashboardTimeZone, setDashboardTimeZoneOverride } = await import("@/store/dashboardTimeZoneStore.js");
+  localStorage.setItem = () => { throw new Error("Quota exceeded"); };
+  setDashboardTimeZoneOverride("Asia/Jakarta");
+  expect(getEffectiveDashboardTimeZone()).toBe("Asia/Jakarta");
+});
+
 it("notifies another open dashboard when the override changes in another tab", async () => {
   const window = browser();
   const { subscribeDashboardTimeZone, getEffectiveDashboardTimeZone } = await import("@/store/dashboardTimeZoneStore.js");
